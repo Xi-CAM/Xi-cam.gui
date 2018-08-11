@@ -16,7 +16,6 @@ from functools import partial
 #   WorkflowModel
 
 
-
 class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal(object)
 
@@ -33,7 +32,7 @@ class WorkflowEditor(QSplitter):
         self.workflowview.sigShowParameter.connect(
             lambda parameter: self.processeditor.setParameters(parameter, showTop=False))
 
-        workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
+        #workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
 
 
 class WorkflowProcessEditor(ParameterTree):
@@ -84,7 +83,7 @@ class LinearWorkflowView(QTableView):
         self.setItemDelegateForColumn(2, DeleteDelegate(self))
 
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.selectionChanged)
+        #workflowmodel.workflow.attach(self.selectionChanged)
 
         self.horizontalHeader().close()
         # self.horizontalHeader().setStretchLastSection(True)
@@ -102,7 +101,7 @@ class LinearWorkflowView(QTableView):
 
     def selectionChanged(self, selected=None, deselected=None):
         if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
-            process = self.model().workflow._processes[self.selectedIndexes()[0].row()]
+            process = self.model().workflow.processes[self.selectedIndexes()[0].row()]
             self.sigShowParameter.emit(process.parameter)
         else:
             self.sigShowParameter.emit(Parameter(name='empty'))
@@ -115,8 +114,7 @@ class WorkflowModel(QAbstractTableModel):
         self.workflow = workflow
         super(WorkflowModel, self).__init__()
 
-
-        self.workflow.attach(partial(self.layoutChanged.emit))
+        #self.workflow.attach(partial(self.layoutChanged.emit))
 
     def mimeTypes(self):
         return ['text/plain']
@@ -128,7 +126,7 @@ class WorkflowModel(QAbstractTableModel):
 
     def dropMimeData(self, data, action, row, column, parent):
         srcindex = int(data.text())
-        process = self.workflow._processes[srcindex]
+        process = self.workflow.processes[srcindex]
         self.workflow.removeProcess(process)
         self.workflow.insertProcess(parent.row(), process)
         self.workflow.autoConnectAll()
@@ -144,13 +142,13 @@ class WorkflowModel(QAbstractTableModel):
                Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
 
     def rowCount(self, *args, **kwargs):
-        return len(self.workflow._processes)
+        return len(self.workflow.processes)
 
     def columnCount(self, *args, **kwargs):
         return 3
 
     def data(self, index, role):
-        process = self.workflow._processes[index.row()]
+        process = self.workflow.processes[index.row()]
         if not index.isValid():
             return None
         elif role != Qt.DisplayRole:

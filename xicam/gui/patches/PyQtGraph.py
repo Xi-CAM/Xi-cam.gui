@@ -87,4 +87,4 @@ class ImageParameter(Parameter):
         return value
 
 
-registerParameterType('ndarray', ImageParameter, override=True)
+# registerParameterType('ndarray', ImageParameter, override=True)
