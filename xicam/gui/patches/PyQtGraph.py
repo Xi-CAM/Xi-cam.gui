@@ -142,4 +142,3 @@ class FixableSimpleParameter(parameterTypes.SimpleParameter):
 
 registerParameterType('int', FixableSimpleParameter, override=True)
 registerParameterType('float', FixableSimpleParameter, override=True)
->>>>>>> f4803966a4611b4343721dcf671d45ddf5061e87
