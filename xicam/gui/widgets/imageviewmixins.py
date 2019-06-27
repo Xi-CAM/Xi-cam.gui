@@ -336,9 +336,76 @@ class PolygonROI(ImageView):
                      (rect.bottomRight().x(), rect.bottomRight().y()),
                      (rect.topRight().x(), rect.topRight().y()),
                      (rect.topLeft().x(), rect.topLeft().y())]
-        self._roiItem = BetterPolyLineROI(positions=positions, closed=True)
+        self._roiItem = BetterPolyLineROI(positions=positions, closed=True, scaleSnap=True, translateSnap=True)
         self.addItem(self._roiItem)
 
     def poly_mask(self, shape=None, ):
         if not shape: shape = self.imageItem.image.shape
-        return self._roiItem.renderShapeMask(*shape)
+        # return self._roiItem.renderShapeMask(*shape)
+        result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
+
+        # TODO -- move this code to own function and test
+        # Pad result mask rect into bounding rect of mask and image
+        floorX = np.floor(mapped[0]).astype(int)
+        floorY = np.floor(mapped[1]).astype(int)
+
+        # Return empty mask if ROI bounding box does not intersect image bounding box
+        resultRect = QRectF(QPointF(np.min(floorX), np.min(floorY)), QPointF(np.max(floorX), np.max(floorY)))
+        if not self._intersectsImage(resultRect):
+            return np.zeros(shape)
+
+        width = self.imageItem.width()
+        height = self.imageItem.height()
+        roiMinX = np.min(floorX)
+        roiMaxX = np.max(floorX)
+        roiMinY = np.min(floorY)
+        roiMaxY = np.max(floorY)
+        maxX = max(roiMaxX, width - 1)
+        minX = min(roiMinX, 0)
+        maxY = max(roiMaxY, height - 1)
+        minY = min(roiMinY, 0)
+
+        # bounding_box_height = maxY - minY
+        # bounding_box_width = maxX - minX
+
+        # Any negative values where the mask dimension outside of the image indicates 0 padding
+        yBefore = int(minY)
+        yBeforePadding = int(abs(np.min(floorY)))
+        if yBefore < 0:
+            yBeforePadding = 0
+
+        yAfter = int(height - maxY - 1)
+        yAfterPadding = int(height - abs(np.max(floorY)) - 1)
+        if yAfter < 0:
+            yAfterPadding = 0
+
+        xBefore = int(minX)
+        xBeforePadding = int(abs(np.min(floorX)))
+        if xBefore < 0:
+            xBeforePadding = 0
+
+        xAfter = int(width - maxX - 1)
+        xAfterPadding = int(width - abs(np.max(floorX)) - 1)
+        if xAfter < 0:
+            xAfterPadding = 0
+
+        # assert(y_after_offset - y_before_offset + 1 == height)
+        # assert(x_after_offset - x_before_offset + 1 == width)
+
+        bounding_box = np.pad(result, ((xBeforePadding, xAfterPadding), (yBeforePadding, yAfterPadding)), 'constant')
+
+        # Trim off mask that does not intersect with the image
+        trimmed = bounding_box[int(abs(xBefore)):width - xBefore, int(abs(yBefore)):height - yBefore]
+        # trimmed[roiMinX:roiMaxX+1, roiMinY:roiMaxY+1]
+        return trimmed
+
+
+    def _intersectsImage(self, roiRect : QRectF):
+        return self.imageItem.boundingRect().intersects(roiRect)
+
+        # if ((x_coord[0] >= 0 or x_coord[0] <= width) or (x_coord[1] >= 0 or x_coord[1] <= width)) \
+        #     and ((y_coord[0] >= 0 or y_coord[1] <= height) or (y_coord[1] >= 0 or y_coord[1] >= height)):
+        #     return True
+        # return False
+
+
