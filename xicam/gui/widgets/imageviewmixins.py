@@ -349,6 +349,20 @@ class PolygonROI(ImageView):
         floorX = np.floor(mapped[0]).astype(int)
         floorY = np.floor(mapped[1]).astype(int)
 
+        # TODO TEMP
+        from matplotlib import pyplot as plt
+
+        plt.figure('image (origin=lower)')
+        plt.imshow(self.imageItem.image, origin='lower')
+
+        plt.figure('initial result (origin=lower)')
+        plt.imshow(result, origin='lower')
+        # plt.figure('floor(mapped[0]')
+        # plt.imshow(floorX)
+        # plt.figure('floor(mapped[1]')
+        # plt.imshow(floorY)
+        # END TODO TEMP
+
         # Return empty mask if ROI bounding box does not intersect image bounding box
         resultRect = QRectF(QPointF(np.min(floorX), np.min(floorY)), QPointF(np.max(floorX), np.max(floorY)))
         if not self._intersectsImage(resultRect):
@@ -392,11 +406,23 @@ class PolygonROI(ImageView):
         # assert(y_after_offset - y_before_offset + 1 == height)
         # assert(x_after_offset - x_before_offset + 1 == width)
 
-        bounding_box = np.pad(result, ((xBeforePadding, xAfterPadding), (yBeforePadding, yAfterPadding)), 'constant')
+        bounding_box = np.pad(result, ((xAfterPadding, xBeforePadding), (yAfterPadding, yBeforePadding)), 'constant')
+
+        plt.figure('bounding_box, origin="lower"')
+        plt.imshow(bounding_box, origin='lower')
 
         # Trim off mask that does not intersect with the image
-        trimmed = bounding_box[int(abs(xBefore)):width - xBefore, int(abs(yBefore)):height - yBefore]
+        rowSliceLower = int(abs(xBefore))
+        rowSliceUpper = width - xBefore
+        colSliceLower = int(abs(yBefore))
+        colSliceUpper = height - yBefore
+        trimmed = bounding_box[rowSliceLower:rowSliceUpper, colSliceLower:colSliceUpper]
         # trimmed[roiMinX:roiMaxX+1, roiMinY:roiMaxY+1]
+        # TODO TEMP
+        plt.figure(f'trimmed, origin="lower"; slice -- {rowSliceLower}:{rowSliceUpper}, {colSliceLower}:{colSliceUpper}')
+        plt.imshow(trimmed, origin='lower')
+        plt.show()
+        # END TODO TEMP
         return trimmed
 
 
