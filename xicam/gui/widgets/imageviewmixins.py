@@ -63,15 +63,15 @@ class PixelSpace(ImageView):
     def transform(self, img=None):
         # Build Quads
         shape = np.squeeze(img).shape
-        a = [(0, shape[0] - 1),
-             (shape[1] - 1, shape[0] - 1),
-             (shape[1] - 1, 0),
+        a = [(0, shape[-2] - 1),
+             (shape[-1] - 1, shape[-2] - 1),
+             (shape[-1] - 1, 0),
              (0, 0)]
 
         b = [(0, 0),
-             (shape[1] - 1, 0),
-             (shape[1] - 1, shape[0] - 1),
-             (0, shape[0] - 1)]
+             (shape[-1] - 1, 0),
+             (shape[-1] - 1, shape[-2] - 1),
+             (0, shape[-2] - 1)]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -129,16 +129,17 @@ class EwaldCorrected(QSpace):
         self.setTransform()
 
     def transform(self, img):
-        if not self._geometry: return super(QSpace, self).transform(img)  # Do pixel space transform when not calibrated
+        if not self._geometry: return super(EwaldCorrected, self).transform(
+            img)  # Do pixel space transform when not calibrated
 
         from camsaxs import remesh_bbox
         img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
 
         # Build Quads
         shape = img.shape
-        a = 0, shape[0] - 1
-        b = shape[1] - 1, shape[0] - 1
-        c = shape[1] - 1, 0
+        a = 0, shape[-2] - 1
+        b = shape[-1] - 1, shape[-2] - 1
+        c = shape[-1] - 1, 0
         d = 0, 0
 
         quad1 = QPolygonF()
@@ -164,10 +165,10 @@ class EwaldCorrected(QSpace):
             img, transform = self.transform(img)
             self.axesItem.setLabel('bottom', u'q_x (Å⁻¹)')  # , units='s')
             self.axesItem.setLabel('left', u'q_z (Å⁻¹)')
-            super(QSpace, self).setImage(img, *args, transform=transform, **kwargs)
+            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
 
         else:
-            super(QSpace, self).setImage(img, *args, **kwargs)
+            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
 
 
 class CenterMarker(QSpace):
@@ -266,14 +267,14 @@ class PixelCoordinates(PixelSpace):
         except IndexError:
             I = 0
 
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
                                   f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
                                   f"<span style=''>I={I:0.0f}</span></div>")
 
 
-class QCoordinates(QSpace):
+class QCoordinates(QSpace, PixelCoordinates):
     def formatCoordinates(self, pxpos, pos):
         """
         when the mouse is moved in the viewer, recalculate coordinates
@@ -283,10 +284,10 @@ class QCoordinates(QSpace):
             I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
         except IndexError:
             I = 0
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
                                   f"<span style=''>I={I:0.0f}</span>, "
                                   f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
                                   f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
