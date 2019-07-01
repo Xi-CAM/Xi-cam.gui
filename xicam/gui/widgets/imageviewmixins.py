@@ -345,42 +345,31 @@ class PolygonROI(ImageView):
         # return self._roiItem.renderShapeMask(*shape)
         result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
 
-        result_orig = result
-        mapped_orig = mapped
+        # TODO -- move this code to own function and test
+        # Reverse the result array to make indexing calculations easier, then revert back
         result = result[::-1, ::-1]
         mapped = mapped[::-1, ::-1]
 
-        # TODO -- move this code to own function and test
         # Pad result mask rect into bounding rect of mask and image
         floorRow = np.floor(mapped[0]).astype(int)
         floorCol = np.floor(mapped[1]).astype(int)
 
-        # TODO TEMP
-        from matplotlib import pyplot as plt
-
-        plt.figure('image (origin=lower)')
-        plt.imshow(self.imageItem.image, origin='lower')
-
-        plt.figure('initial result (origin=lower)')
-        plt.imshow(result, origin='lower')
-        # plt.figure('floor(mapped[0]')
-        # plt.imshow(floorX)
-        # plt.figure('floor(mapped[1]')
-        # plt.imshow(floorY)
-        # END TODO TEMP
-
         # Return empty mask if ROI bounding box does not intersect image bounding box
         resultRect = QRectF(QPointF(np.min(floorRow), np.min(floorCol)), QPointF(np.max(floorRow), np.max(floorCol)))
         if not self._intersectsImage(resultRect):
+            # TODO -- is zeros(shape) the right return value for a non-intersecting polygon?
             return np.zeros(shape)
 
-        width = self.imageItem.width()
-        height = self.imageItem.height()
+        # Find the bounds of the ROI polygon
         minX = np.min(floorRow)
         maxX = np.max(floorRow)
         minY = np.min(floorCol)
         maxY = np.max(floorCol)
 
+        width = self.imageItem.width()
+        height = self.imageItem.height()
+        # Pad the ROI polygon into the image shape
+        # Don't need padding if a polygon boundary is outside of the image shape
         padXBefore = minX
         if minX < 0:
             padXBefore = 0
@@ -396,85 +385,29 @@ class PolygonROI(ImageView):
 
         boundingBox = np.pad(result, ((padYBefore, padYAfter), (padXBefore, padXAfter)), 'constant')
 
-        indexX = 0
-        indexY = 0
+        # For trimming, any negative minimums need to be shifted into the image shape
+        offsetX = 0
+        offsetY = 0
         if minX < 0:
-            indexX = abs(minX)
+            offsetX = abs(minX)
         if minY < 0:
-            indexY = abs(minY)
-        trimmed = boundingBox[abs(indexY): abs(indexY) + height, abs(indexX):abs(indexX) + width]
+            offsetY = abs(minY)
+        trimmed = boundingBox[abs(offsetY): abs(offsetY) + height, abs(offsetX):abs(offsetX) + width]
 
-        # width = self.imageItem.width()
-        # height = self.imageItem.height()
-        # roiRowMin = np.min(floorRow)
-        # roiRowMax = np.max(floorRow)
-        # rowColMin = np.min(floorCol)
-        # roiColMax = np.max(floorCol)
-        # yMax = max(roiRowMax, width - 1)
-        # yMin = min(roiRowMin, 0)
-        # xMax = max(roiColMax, height - 1)
-        # xMin = min(rowColMin, 0)
-        #
-        # # bounding_box_height = maxY - minY
-        # # bounding_box_width = maxX - minX
-        #
-        # # Any negative values where the mask dimension outside of the image indicates 0 padding
-        # beforeX = int(xMin)
-        # beforePaddingX = int(abs(np.min(floorCol)))
-        # if beforeX < 0:
-        #     beforePaddingX = 0
-        #
-        # afterX = int(height - xMax - 1)
-        # paddingAfterX = int(height - abs(np.max(floorCol)) - 1)
-        # if afterX < 0:
-        #     paddingAfterX = 0
-        #
-        # beforeY = int(yMin)
-        # beforePaddingY = int(abs(np.min(floorRow)))
-        # if beforeY < 0:
-        #     beforePaddingY = 0
-        #
-        # afterY = int(width - yMax - 1)
-        # afterPaddingY = int(width - abs(np.max(floorRow)) - 1)
-        # if afterY < 0:
-        #     afterPaddingY = 0
-        #
-        # # assert(y_after_offset - y_before_offset + 1 == height)
-        # # assert(x_after_offset - x_before_offset + 1 == width)
-        #
-        # # bounding_box = np.pad(result, ((afterPaddingY, beforePaddingY), (paddingAfterX, beforePaddingX)), 'constant')
-        # bounding_box = np.pad(result, ((beforePaddingY, afterPaddingY), (beforePaddingX, paddingAfterX)), 'constant')
-
-        plt.figure('bounding_box, origin="lower"')
-        plt.imshow(boundingBox, origin='lower')
-        plt.show()
-
-        # Trim off mask that does not intersect with the image
-        # rowSliceLower = int(abs(beforeY))
-        # rowSliceUpper = width - beforeY
-        # colSliceLower = int(abs(beforeX))
-        # colSliceUpper = height - beforeX
-        # if rowSliceLower != 0:
-        #     rowSliceLower *= -1
-        # else:
-        #     rowSliceLower = height
-        # if colSliceLower != 0:
-        #     colSliceLower *= -1
-        # else:
-        #     colSliceLower = width
-
-        # trimmed = bounding_box[abs(yMin):(abs(yMin) + height), abs(xMin):(abs(xMin) + width)]
-        # trimmed = bounding_box[rowSliceLower:rowSliceUpper, colSliceLower:colSliceUpper]
-        # trimmed[roiMinX:roiMaxX+1, roiMinY:roiMaxY+1]
-        # TODO TEMP
-        # plt.figure(f'trimmed, origin="lower"; slice -- :{rowSliceLower}, :{colSliceLower}')
+        # Reorient the trimmed mask array
         trimmed = trimmed[::-1, ::-1]
-        plt.figure(f'trimmed, origin="lower", [{abs(indexY)}:{abs(indexY)+height}, {abs(indexX)}:{abs(indexX)+width}]')
-        plt.imshow(trimmed, origin='lower')
-        plt.figure('trimmed, default origin')
-        plt.imshow(trimmed)
-        plt.show()
-        # END TODO TEMP
+
+        # # TODO remove plotting code below
+        # from matplotlib import pyplot as plt
+        # plt.figure('bounding_box, origin="lower"')
+        # plt.imshow(boundingBox, origin='lower')
+        # plt.show()
+        #
+        #
+        # plt.figure(f'trimmed, origin="lower", [{abs(offsetY)}:{abs(offsetY)+height}, {abs(offsetX)}:{abs(offsetX)+width}]')
+        # plt.imshow(trimmed, origin='lower')
+        # plt.show()
+        # # TODO remove the plotting code above
         return trimmed
 
 
