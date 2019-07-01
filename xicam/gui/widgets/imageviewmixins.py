@@ -331,6 +331,18 @@ class BetterButtons(ImageView):
 
 class PolygonROI(ImageView):
     def __init__(self, *args, **kwargs):
+        """
+        Image view extended with an adjustable polygon region-of-interest (ROI).
+
+        When first displayed, the polygon ROI's corners will be set to the image item's corners.
+
+        Parameters
+        ----------
+        args, optional
+            Positional arguments for the ImageView.
+        kwargs, optional
+            Keyword arguments for the ImageView.
+        """
         super(PolygonROI, self).__init__(*args, **kwargs)
         rect = self.imageItem.boundingRect()  # type: QRectF
         positions = [(rect.bottomLeft().x(), rect.bottomLeft().y()),
@@ -340,9 +352,20 @@ class PolygonROI(ImageView):
         self._roiItem = BetterPolyLineROI(positions=positions, closed=True, scaleSnap=True, translateSnap=True)
         self.addItem(self._roiItem)
 
-    def poly_mask(self, shape=None, ):
-        if not shape: shape = self.imageItem.image.shape
-        # return self._roiItem.renderShapeMask(*shape)
+    def poly_mask(self):
+        """
+        Gets the mask array for a ROI polygon on the image.
+
+        The mask array's shape will match the image's shape.
+        Any pixel inside both the ROI polygon and the image will be set to 1 in the mask array;
+        all other values in the mask will be set to 0.
+
+        Returns
+        -------
+        ndarray:
+            Mask array of the ROI polygon within image space (mask shape matches image shape).
+
+        """
         result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
 
         # TODO -- move this code to own function and test
@@ -358,7 +381,7 @@ class PolygonROI(ImageView):
         resultRect = QRectF(QPointF(np.min(floorRow), np.min(floorCol)), QPointF(np.max(floorRow), np.max(floorCol)))
         if not self._intersectsImage(resultRect):
             # TODO -- is zeros(shape) the right return value for a non-intersecting polygon?
-            return np.zeros(shape)
+            return np.zeros(self.imageItem.image.shape)
 
         # Find the bounds of the ROI polygon
         minX = np.min(floorRow)
@@ -411,12 +434,21 @@ class PolygonROI(ImageView):
         return trimmed
 
 
-    def _intersectsImage(self, roiRect : QRectF):
-        return self.imageItem.boundingRect().intersects(roiRect)
+    def _intersectsImage(self, rectangle: QRectF):
+        """
+        Checks if a rectangle intersects the image's bounding rectangle.
 
-        # if ((x_coord[0] >= 0 or x_coord[0] <= width) or (x_coord[1] >= 0 or x_coord[1] <= width)) \
-        #     and ((y_coord[0] >= 0 or y_coord[1] <= height) or (y_coord[1] >= 0 or y_coord[1] >= height)):
-        #     return True
-        # return False
+        Parameters
+        ----------
+        rectangle
+            Rectangle to test intersection with the image item's bounding rectangle.
 
+        Returns
+        -------
+        bool
+            True if the rectangle and the image bounding rectangle intersect; otherwise False.
+
+        """
+        # TODO -- test
+        return self.imageItem.boundingRect().intersects(rectangle)
 
