@@ -345,10 +345,15 @@ class PolygonROI(ImageView):
         # return self._roiItem.renderShapeMask(*shape)
         result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
 
+        result_orig = result
+        mapped_orig = mapped
+        result = result[::-1, ::-1]
+        mapped = mapped[::-1, ::-1]
+
         # TODO -- move this code to own function and test
         # Pad result mask rect into bounding rect of mask and image
-        floorX = np.floor(mapped[0]).astype(int)
-        floorY = np.floor(mapped[1]).astype(int)
+        floorRow = np.floor(mapped[0]).astype(int)
+        floorCol = np.floor(mapped[1]).astype(int)
 
         # TODO TEMP
         from matplotlib import pyplot as plt
@@ -365,63 +370,109 @@ class PolygonROI(ImageView):
         # END TODO TEMP
 
         # Return empty mask if ROI bounding box does not intersect image bounding box
-        resultRect = QRectF(QPointF(np.min(floorX), np.min(floorY)), QPointF(np.max(floorX), np.max(floorY)))
+        resultRect = QRectF(QPointF(np.min(floorRow), np.min(floorCol)), QPointF(np.max(floorRow), np.max(floorCol)))
         if not self._intersectsImage(resultRect):
             return np.zeros(shape)
 
         width = self.imageItem.width()
         height = self.imageItem.height()
-        roiMinX = np.min(floorX)
-        roiMaxX = np.max(floorX)
-        roiMinY = np.min(floorY)
-        roiMaxY = np.max(floorY)
-        maxX = max(roiMaxX, width - 1)
-        minX = min(roiMinX, 0)
-        maxY = max(roiMaxY, height - 1)
-        minY = min(roiMinY, 0)
+        minX = np.min(floorRow)
+        maxX = np.max(floorRow)
+        minY = np.min(floorCol)
+        maxY = np.max(floorCol)
 
-        # bounding_box_height = maxY - minY
-        # bounding_box_width = maxX - minX
+        padXBefore = minX
+        if minX < 0:
+            padXBefore = 0
+        padXAfter = height - maxX
+        if padXAfter < 0:
+            padXAfter = 0
+        padYBefore = minY
+        if minY < 0:
+            padYBefore = 0
+        padYAfter = width - maxY
+        if padYAfter < 0:
+            padYAfter = 0
 
-        # Any negative values where the mask dimension outside of the image indicates 0 padding
-        yBefore = int(minY)
-        yBeforePadding = int(abs(np.min(floorY)))
-        if yBefore < 0:
-            yBeforePadding = 0
+        boundingBox = np.pad(result, ((padYBefore, padYAfter), (padXBefore, padXAfter)), 'constant')
 
-        yAfter = int(height - maxY - 1)
-        yAfterPadding = int(height - abs(np.max(floorY)) - 1)
-        if yAfter < 0:
-            yAfterPadding = 0
+        indexX = 0
+        indexY = 0
+        if minX < 0:
+            indexX = abs(minX)
+        if minY < 0:
+            indexY = abs(minY)
+        trimmed = boundingBox[abs(indexY): abs(indexY) + height, abs(indexX):abs(indexX) + width]
 
-        xBefore = int(minX)
-        xBeforePadding = int(abs(np.min(floorX)))
-        if xBefore < 0:
-            xBeforePadding = 0
-
-        xAfter = int(width - maxX - 1)
-        xAfterPadding = int(width - abs(np.max(floorX)) - 1)
-        if xAfter < 0:
-            xAfterPadding = 0
-
-        # assert(y_after_offset - y_before_offset + 1 == height)
-        # assert(x_after_offset - x_before_offset + 1 == width)
-
-        bounding_box = np.pad(result, ((xAfterPadding, xBeforePadding), (yAfterPadding, yBeforePadding)), 'constant')
+        # width = self.imageItem.width()
+        # height = self.imageItem.height()
+        # roiRowMin = np.min(floorRow)
+        # roiRowMax = np.max(floorRow)
+        # rowColMin = np.min(floorCol)
+        # roiColMax = np.max(floorCol)
+        # yMax = max(roiRowMax, width - 1)
+        # yMin = min(roiRowMin, 0)
+        # xMax = max(roiColMax, height - 1)
+        # xMin = min(rowColMin, 0)
+        #
+        # # bounding_box_height = maxY - minY
+        # # bounding_box_width = maxX - minX
+        #
+        # # Any negative values where the mask dimension outside of the image indicates 0 padding
+        # beforeX = int(xMin)
+        # beforePaddingX = int(abs(np.min(floorCol)))
+        # if beforeX < 0:
+        #     beforePaddingX = 0
+        #
+        # afterX = int(height - xMax - 1)
+        # paddingAfterX = int(height - abs(np.max(floorCol)) - 1)
+        # if afterX < 0:
+        #     paddingAfterX = 0
+        #
+        # beforeY = int(yMin)
+        # beforePaddingY = int(abs(np.min(floorRow)))
+        # if beforeY < 0:
+        #     beforePaddingY = 0
+        #
+        # afterY = int(width - yMax - 1)
+        # afterPaddingY = int(width - abs(np.max(floorRow)) - 1)
+        # if afterY < 0:
+        #     afterPaddingY = 0
+        #
+        # # assert(y_after_offset - y_before_offset + 1 == height)
+        # # assert(x_after_offset - x_before_offset + 1 == width)
+        #
+        # # bounding_box = np.pad(result, ((afterPaddingY, beforePaddingY), (paddingAfterX, beforePaddingX)), 'constant')
+        # bounding_box = np.pad(result, ((beforePaddingY, afterPaddingY), (beforePaddingX, paddingAfterX)), 'constant')
 
         plt.figure('bounding_box, origin="lower"')
-        plt.imshow(bounding_box, origin='lower')
+        plt.imshow(boundingBox, origin='lower')
+        plt.show()
 
         # Trim off mask that does not intersect with the image
-        rowSliceLower = int(abs(xBefore))
-        rowSliceUpper = width - xBefore
-        colSliceLower = int(abs(yBefore))
-        colSliceUpper = height - yBefore
-        trimmed = bounding_box[rowSliceLower:rowSliceUpper, colSliceLower:colSliceUpper]
+        # rowSliceLower = int(abs(beforeY))
+        # rowSliceUpper = width - beforeY
+        # colSliceLower = int(abs(beforeX))
+        # colSliceUpper = height - beforeX
+        # if rowSliceLower != 0:
+        #     rowSliceLower *= -1
+        # else:
+        #     rowSliceLower = height
+        # if colSliceLower != 0:
+        #     colSliceLower *= -1
+        # else:
+        #     colSliceLower = width
+
+        # trimmed = bounding_box[abs(yMin):(abs(yMin) + height), abs(xMin):(abs(xMin) + width)]
+        # trimmed = bounding_box[rowSliceLower:rowSliceUpper, colSliceLower:colSliceUpper]
         # trimmed[roiMinX:roiMaxX+1, roiMinY:roiMaxY+1]
         # TODO TEMP
-        plt.figure(f'trimmed, origin="lower"; slice -- {rowSliceLower}:{rowSliceUpper}, {colSliceLower}:{colSliceUpper}')
+        # plt.figure(f'trimmed, origin="lower"; slice -- :{rowSliceLower}, :{colSliceLower}')
+        trimmed = trimmed[::-1, ::-1]
+        plt.figure(f'trimmed, origin="lower", [{abs(indexY)}:{abs(indexY)+height}, {abs(indexX)}:{abs(indexX)+width}]')
         plt.imshow(trimmed, origin='lower')
+        plt.figure('trimmed, default origin')
+        plt.imshow(trimmed)
         plt.show()
         # END TODO TEMP
         return trimmed
