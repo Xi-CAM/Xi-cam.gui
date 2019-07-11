@@ -433,7 +433,6 @@ class LogScaleImageItem(ImageItem):
 
 
 class LogScaleIntensity(ImageView):
-    # TODO: constrain levels min to above 0
     def __init__(self, *args, **kwargs):
         if kwargs.get('imageItem') and not isinstance(kwargs.get('imageItem'), LogScaleImageItem):
             raise RuntimeError('The imageItem set to a LogScaleIntensity ImageView must be a LogScaleImageItem.')
@@ -453,13 +452,14 @@ class LogScaleIntensity(ImageView):
         self.logIntensityButton.setObjectName("logIntensity")
         self.ui.gridLayout.addWidget(self.logIntensityButton, 3, 2, 1, 1)
         self.logIntensityButton.setCheckable(True)
-        self.logIntensityButton.setChecked(True)
+        self.setLogScale(True)
         self.logIntensityButton.clicked.connect(self._setLogScale)
 
     def _setLogScale(self, value):
         self.imageItem.logScale = value
         self.imageItem.qimage = None
         self.imageItem.update()
+        self.getHistogramWidget().region.setBounds([0 if value else None, None])
 
     def setLogScale(self, value):
         self._setLogScale(value)
