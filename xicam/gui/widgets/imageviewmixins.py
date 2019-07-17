@@ -270,7 +270,7 @@ class PixelCoordinates(PixelSpace):
         self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
                                   f"<span style=''>I={I:0.0f}</span></div>")
 
 
@@ -425,7 +425,7 @@ class LogScaleImageItem(ImageItem):
 
         if self.logScale:
             with np.errstate(invalid='ignore'):
-                levels = np.log(levels)
+                levels = np.log(np.add(levels, 1))
             levels[0] = np.nanmax([levels[0], 0])
 
         argb, alpha = fn.makeARGB(image, lut=lut, levels=levels)
