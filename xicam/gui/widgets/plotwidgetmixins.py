@@ -29,9 +29,6 @@ class HoverHighlight(pg.PlotWidget):
                         scatter = item.scatter  # type: pg.ScatterPlotItem
                         points = scatter.pointsAt(mousePoint)
                         if points:
-                            # print(scatter.pointsAt(mousePoint))
-                            # index = list(scatter.points()).index(points[0])
-
                             self._last_pen = points[0].pen()
                             self._last_highlighted = points[0]
                             points[0].setPen(pg.mkPen('w', width=2))
@@ -60,7 +57,6 @@ class CurveLabels(HoverHighlight):
         item = self.plotItem.plot(*args, **kwargs)
 
         item.sigPointsClicked.connect(self.showLabel)
-        # item.setClickable(True)
 
     def showLabel(self, item, points):
         if self._curvepoint:
@@ -82,7 +78,6 @@ class CurveLabels(HoverHighlight):
 if __name__ == '__main__':
     qapp = QApplication([])
     w = CurveLabels()
-    # w.plotItem.addLegend()
     for i in range(10):
         pen = pg.mkColor((i, 10))
         w.plot(np.random.random((100,)) + i * .5, name=str(i), pen=pen)
