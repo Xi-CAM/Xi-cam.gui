@@ -107,6 +107,11 @@ class SafeImageView(ImageView):
             return
         if len(img) < 4:
             return
+        # Don't allow 1 dimensions (after updating Input/Outputs to be np.ndarray instead of np.array)
+        # TODO --replace this not allow something like g2's to be displayed as a PlotView, not ImageView
+        for dim in img.shape:
+            if dim == 1:
+                return
         super(SafeImageView, self).setImage(np.squeeze(img), *args, **kwargs)
 
 
