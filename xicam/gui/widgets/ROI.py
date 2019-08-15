@@ -8,22 +8,33 @@ import numpy as np
 # MIXIN!~
 # Now with 100% more ROI!
 class BetterROI(ROI):
+    roi_count = 0
+    index = None
+
+    def __new__(cls, *args, **kwargs):
+        BetterROI.roi_count += 1
+        instance = ROI.__new__(cls, *args, **kwargs)
+        instance.index = cls.roi_count
+        return instance
+
     def __init__(self, *args, **kwargs):
         super(BetterROI, self).__init__(*args, **kwargs)
         self._restyle()
 
     def _restyle(self):
         self.currentPen.setWidth(2)
+
         for handledict in self.handles:  # type: dict
-            handle = handledict['item']  # type: Handle
+            handle = handledict["item"]  # type: Handle
             handle.radius = handle.radius * 2
             handle.pen.setWidth(2)
             handle.buildPath()
 
 
 class BetterPolyLineROI(BetterROI, PolyLineROI):
-    pass
-
+    def __repr__(self):
+        return f"ROI #{self.index}"
+      
 
 class QCircRectF(QRectF):
     def __init__(self, center=(0., 0.), radius=1., rect=None):
