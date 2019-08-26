@@ -1,13 +1,12 @@
 import pickle
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal
+from qtpy.QtGui import QIcon, QPixmap
+from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
 from xicam.core.execution.workflow import Workflow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 from xicam.gui.static import path
 from xicam.plugins import manager as pluginmanager
 from functools import partial
-
 
 # WorkflowEditor
 #  WorkflowProcessEditor
