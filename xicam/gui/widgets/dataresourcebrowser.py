@@ -5,6 +5,7 @@ from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePl
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader, load_header
 
+
 from xicam.core import threads
 from .searchlineedit import SearchLineEdit
 from urllib import parse
@@ -88,7 +89,7 @@ class DataBrowser(QWidget):
 
 
 class BrowserTabBar(ContextMenuTabBar):
-    sigAddBrowser = Signal(DataBrowser, str)
+    sigAddBrowser = Signal(object, str)
 
     def __init__(self, tabwidget: QTabWidget):
         super(BrowserTabBar, self).__init__()
@@ -144,7 +145,8 @@ class BrowserTabBar(ContextMenuTabBar):
         self.actions = {}
         from xicam.plugins import manager as pluginmanager
 
-        for plugin in pluginmanager.getPluginsOfCategory("DataResourcePlugin"):
+        for plugin in pluginmanager.getPluginsOfCategory("CatalogPlugin") + pluginmanager.getPluginsOfCategory(
+                "DataResourcePlugin"):
             self.actions[plugin.plugin_object.name] = QAction(plugin.plugin_object.name)
             self.actions[plugin.plugin_object.name].triggered.connect(partial(self._addBrowser, plugin))
             self.menu.addAction(self.actions[plugin.plugin_object.name])
@@ -152,9 +154,22 @@ class BrowserTabBar(ContextMenuTabBar):
         self.menu.popup(pos)
 
     def _addBrowser(self, plugin):
-        datasource = plugin.plugin_object()
-        self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))), datasource.name)
+        from xicam.plugins import DataResourcePlugin, CatalogPlugin
 
+        plugin = plugin.plugin_object()
+
+        if isinstance(plugin, DataResourcePlugin):
+            datasource = plugin
+            self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
+                                    datasource.name)
+
+        elif isinstance(plugin, CatalogPlugin):
+            catalog = plugin
+            model = catalog.model
+            view = catalog.view()
+            view.setModel(model)
+            controller = catalog.controller(view)
+            self.sigAddBrowser.emit(controller, catalog.name)
 
 class DataResourceView(QObject):
     def __init__(self, model: QAbstractItemModel):
@@ -308,3 +323,4 @@ class DataResourceBrowser(QWidget):
             except AttributeError:
                 self.browsertabbar.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
                 self.browsertabbar.tabButton(tab, QTabBar.LeftSide).hide()
+
