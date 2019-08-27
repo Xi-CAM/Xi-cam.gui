@@ -2,7 +2,7 @@ from functools import partial
 
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
-from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction
+from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.GUIPlugin import PanelState
 from yapsy import PluginInfo
 
