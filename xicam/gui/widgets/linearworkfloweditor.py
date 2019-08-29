@@ -59,8 +59,18 @@ class WorkflowWidget(QWidget):
         self.toolbar = QToolBar()
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
+        sortingDict = {}
         for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
+            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
+            if not typeOfProcessingPlugin in sortingDict.keys():
+                sortingDict[typeOfProcessingPlugin] = []
+            sortingDict[typeOfProcessingPlugin].append(plugin)
+        for key in sortingDict.keys():
+            functionmenu.addSeparator()
+            functionmenu.addAction(key)
+            functionmenu.addSeparator()
+            for plugin in sortingDict[key]:
+                functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
         addfunctionmenu.setMenu(functionmenu)
         addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
         addfunctionmenu.setText("Add Function")
