@@ -1,3 +1,5 @@
+from intake.catalog.base import Catalog
+from intake.catalog.entry import CatalogEntry
 from qtpy.QtWidgets import *
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -162,14 +164,8 @@ class BrowserTabBar(ContextMenuTabBar):
             datasource = plugin
             self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
                                     datasource.name)
-
-        elif isinstance(plugin, CatalogPlugin):
-            catalog = plugin
-            model = catalog.model
-            view = catalog.view()
-            view.setModel(model)
-            controller = catalog.controller(view)
-            self.sigAddBrowser.emit(controller, catalog.name)
+        elif isinstance(plugin, Catalog):
+            self.sigAddBrowser.emit(plugin.controller, plugin.name)
 
 class DataResourceView(QObject):
     def __init__(self, model: QAbstractItemModel):
