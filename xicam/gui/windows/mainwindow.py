@@ -4,6 +4,7 @@ from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Sign
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.guiplugin import PanelState
+from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import venvs
