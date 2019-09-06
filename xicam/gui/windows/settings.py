@@ -39,7 +39,8 @@ class ConfigDialog(QDialog):
         self.contentsWidget.selectionModel().currentChanged.connect(self.changePage)
 
         self.buttonboxWidget = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply)
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply# | QDialogButtonBox.Help
+        )
         self.buttonboxWidget.button(QDialogButtonBox.Ok).clicked.connect(self.ok)
         self.buttonboxWidget.button(QDialogButtonBox.Apply).clicked.connect(self.apply)
         self.buttonboxWidget.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
