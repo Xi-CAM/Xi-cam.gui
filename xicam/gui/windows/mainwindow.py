@@ -262,11 +262,6 @@ class pluginModeWidget(QToolBar):
 
             node = Node(plugin, plugin.plugin_object.name)
 
-            try:
-                print(plugin.plugin_object.stages.items())
-            except AttributeError:
-                print('huh')
-
             for name, stage in plugin.plugin_object.stages.items():
                 node.children.append(self._build_subnodes(name, stage, parent=node))
 
