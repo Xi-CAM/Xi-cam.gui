@@ -64,6 +64,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=[
         "xicam.gui",
+        "xicam.gui.bluesky",
         "xicam.gui.cammart",
         "xicam.gui.settings",
         "xicam.gui.static",
@@ -81,7 +82,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["qtpy", "pathlib", "pyqtgraph", "qdarkstyle", "qtmodern", "qtconsole", "xicam.plugins", "xicam.core"]
+    install_requires=["qtpy", "pathlib", "pyqtgraph", "qdarkstyle", "qtmodern", "qtconsole", "xicam.plugins", "xicam.core", "bluesky-browser"]
     + pyqt,
     setup_requires=[],
     # List additional groups of dependencies here (e.g. development
