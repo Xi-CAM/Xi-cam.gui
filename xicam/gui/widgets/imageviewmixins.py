@@ -145,7 +145,7 @@ class EwaldCorrected(QSpace):
         quad2 = QPolygonF()
         for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
             quad1.append(QPointF(*p))
-            quad2.append(QPointF(q_x[q[::-1]], q_z[q[::-1]]))
+            quad2.append(QPointF(q_x[q], q_z[q]))
 
         transform = QTransform()
         QTransform.quadToQuad(quad1, quad2, transform)
@@ -187,9 +187,10 @@ class CenterMarker(QSpace):
         except (TypeError, AttributeError):
             pass
         else:
-            x = fit2d['centerX']
-            y = self.imageItem.image.shape[-2] - fit2d['centerY']
-            self.centerplot.setData(x=[x], y=[y])
+            if self.imageItem.image:
+                x = fit2d['centerX']
+                y = self.imageItem.image.shape[-2] - fit2d['centerY']
+                self.centerplot.setData(x=[x], y=[y])
 
     def setGeometry(self, geometry):
         super(CenterMarker, self).setGeometry(geometry)
