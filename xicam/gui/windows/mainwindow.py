@@ -1,4 +1,5 @@
 from functools import partial
+import sys
 
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
@@ -8,7 +9,8 @@ from yapsy import PluginInfo
 from intake.catalog import Catalog
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import venvs, EntryPointPluginInfo
+from xicam.gui.cammart import venvs
+from xicam.plugins import EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from ..widgets import defaultstage
@@ -48,11 +50,8 @@ class XicamMainWindow(QMainWindow):
         # Setup appearance
         self.setWindowTitle("Xi-cam")
 
-        # Initilize venv
-        venvs.initialize_venv()
-
-        # Load plugins (THIS IS NOW CALLED IMPLICITLY THROUGH initialize_venv()
-        # pluginmanager.collectPlugins()
+        # Load plugins
+        pluginmanager.collectPlugins()
 
         # Restore Settings
         self._configdialog = ConfigDialog()
@@ -293,6 +292,8 @@ class pluginModeWidget(QToolBar):
         elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
             self._showNodes(nodes, direction)
+            self.sigSetGUIPlugin.emit(node.object.plugin_object)
+            self.setStage(node.object.plugin_object.stage)
 
         # elif isinstance(node.object, dict): # midlevel
         #     self._showNodes(node.object.keys(), node.object.values(), direction)
