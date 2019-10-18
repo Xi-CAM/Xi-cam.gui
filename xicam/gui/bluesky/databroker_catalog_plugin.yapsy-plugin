@@ -1,8 +1,0 @@
-[Core]
-Name = databroker_catalog_plugin
-Module = databroker_catalog_plugin.py
-
-[Documentation]
-Author = Dylan McReynolds
-Version = 0.1.0
-Website = http://lotsofplugins.com
