@@ -58,7 +58,7 @@ class PixelSpace(ImageView):
             kwargs["view"] = self.axesItem
 
         self._transform = QTransform()
-        self._image = None
+        self._raw_image = None
 
         super(PixelSpace, self).__init__(*args, **kwargs)
 
@@ -90,6 +90,9 @@ class PixelSpace(ImageView):
         if img is None:
             return
 
+        if getattr(self, 'displaymode', DisplayMode.raw) == DisplayMode.raw:
+            self._raw_image = img
+
         if not kwargs.get("transform", None):
             img, transform = self.transform(img)
             self.updateAxes()
@@ -99,7 +102,7 @@ class PixelSpace(ImageView):
             super(PixelSpace, self).setImage(img, *args, **kwargs)
 
     def setTransform(self):
-        self.setImage(self._image)  # this should loop back around to the respective transforms
+        self.setImage(self._raw_image)  # this should loop back around to the respective transforms
 
     def updateAxes(self):
         self.axesItem.setLabel("bottom", "x (px)")  # , units='s')
@@ -164,11 +167,11 @@ class EwaldCorrected(QSpace):
         if img is None:
             return
 
-        self._image = img
+        self._raw_image = img
 
         if self._geometry:
-            img, transform = self.transform(img)
-            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
+            transform_img, transform = self.transform(img)
+            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
 
         else:
             super(EwaldCorrected, self).setImage(img, *args, **kwargs)
@@ -200,7 +203,7 @@ class CenterMarker(QSpace):
             if self.imageItem.image is not None:
                 if self.displaymode == DisplayMode.raw:
                     x = fit2d['centerX']
-                    y = self._image.shape[-2] - fit2d['centerY']
+                    y = self._raw_image.shape[-2] - fit2d['centerY']
                     self.centerplot.setData(x=[x], y=[y])
                 elif self.displaymode == DisplayMode.remesh:
                     self.centerplot.setData(x=[0], y=[0])
