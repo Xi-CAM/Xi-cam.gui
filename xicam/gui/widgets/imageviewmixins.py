@@ -22,8 +22,6 @@ import enum
 #                                          y = right
 #                                          z = beam
 
-# TODO: Add notification when qgrid is very wrong
-
 
 def q_from_angles(phi, alpha, wavelength):
     r = 2 * np.pi / wavelength
