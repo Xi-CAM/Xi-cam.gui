@@ -113,7 +113,7 @@ class XicamMainWindow(QMainWindow):
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
     def open(self, header):
-        if isinstance(header, CatalogEntry):
+        if isinstance(header, (Catalog, CatalogEntry)):
             self.currentGUIPlugin.appendCatalog(header)
         else:
             self.currentGUIPlugin.appendHeader(header)
