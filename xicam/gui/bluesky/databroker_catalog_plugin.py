@@ -1,10 +1,13 @@
 """
 Catalog Plugin for browsing pre-configured databroker catalogs
 """
-
+from databroker import MergedCatalog
 from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
+from databroker.v2 import Broker
+from intake.catalog import Catalog
+from intake.catalog.base import RemoteCatalog
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 import logging
@@ -69,9 +72,44 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
         # locations by default might look something like:
         #  'USER_HOME/.local/share/intake', 'PYTHON_ENV/share/intake'
         from databroker import catalog
-        catalog.view = QListView()
-        catalog.controller = SearchingCatalogController(catalog)
+        # normalizedCatalogs = []
+        # assemble_catalogs(normalizedCatalogs, catalog)
+
         # set name again because CatalogPlugins also inherit from Catalog, and that by
         # default not have a name
-        catalog.name = 'Bluesky Databroker'
+        # mergedCatalog = MergedCatalog(normalizedCatalogs)
+        # mergedCatalog.controller = SearchingCatalogController(mergedCatalog)
+        # mergedCatalog.view = QListView()
+        # mergedCatalog.name = 'Bluesky Databroker'
+        # return mergedCatalog
+
+        '''
+        Hard-coded to read from a yaml source named 'intake_server' for testing.
+        
+        '''
+        catalog.controller = SearchingCatalogController(catalog['intake_server'])
+        catalog.view = QListView()
+        catalog.name = 'Hardcoded Intake'
         return catalog
+
+# def assemble_catalogs(normalizedCatalogs, parentCatalog):
+#     '''
+#      create a dict of only top level catalogs...parents of BlueskyRun
+#     :param normalizedCatalog:
+#     :param databrokerCatalogs:
+#     :return:
+#     '''
+#
+#     for catalogName in parentCatalog:
+#         catalogEntry = parentCatalog[catalogName]
+#         catalog = catalogEntry.get()
+#         if isinstance(catalog, Broker):
+#             # this test fails because when coming from intake,
+#             # the parent of BlueSkyRuns is a RemoteCatalog, not a Broker
+#             normalizedCatalogs.append(catalog)
+#             continue
+#         elif isinstance(catalog, Catalog):
+#             assemble_catalogs(normalizedCatalogs, catalog)
+#         else:
+#             continue
+
