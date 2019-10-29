@@ -87,7 +87,7 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
         Hard-coded to read from a yaml source named 'intake_server' for testing.
         
         '''
-        catalog.controller = SearchingCatalogController(catalog['intake_server'])
+        catalog.controller = SearchingCatalogController(catalog)
         catalog.view = QListView()
         catalog.name = 'Hardcoded Intake'
         return catalog
