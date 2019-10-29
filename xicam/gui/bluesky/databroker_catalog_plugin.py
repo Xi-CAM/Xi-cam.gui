@@ -89,7 +89,7 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
         '''
         catalog.controller = SearchingCatalogController(catalog)
         catalog.view = QListView()
-        catalog.name = 'Hardcoded Intake'
+        catalog.name = 'Bluesky Databroker'
         return catalog
 
 # def assemble_catalogs(normalizedCatalogs, parentCatalog):
