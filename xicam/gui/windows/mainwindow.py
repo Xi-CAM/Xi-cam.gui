@@ -1,7 +1,7 @@
 from functools import partial
 import sys
 
-from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.guiplugin import PanelState
@@ -111,6 +111,8 @@ class XicamMainWindow(QMainWindow):
         defaultstage["left"].sigOpen.connect(self.open)
         defaultstage["left"].sigOpen.connect(print)
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
+        self.settings = QSettings("camera", "xicam")
+        self.readSettings(self.settings)
 
     def open(self, header):
         if isinstance(header, CatalogEntry):
@@ -219,6 +221,16 @@ class XicamMainWindow(QMainWindow):
             focused_widget.clearFocus()
         super(XicamMainWindow, self).mousePressEvent(event)
 
+    def closeEvent(self, event):
+        self.settings.setValue("geometry", self.saveGeometry())
+        self.settings.setValue("windowState", self.saveState())
+        QMainWindow.closeEvent(self, event)
+
+    def readSettings(self, settings):
+        if self.settings.value("geometry") is not None:
+            self.restoreGeometry(self.settings.value("geometry"))
+        if self.settings.value("windowState") is not None:
+            self.restoreState(self.settings.value("windowState"))
 
 class Node(object):
     def __init__(self, object, name, children=None, parent=None):
