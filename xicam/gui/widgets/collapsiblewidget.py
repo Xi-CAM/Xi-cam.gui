@@ -1,6 +1,5 @@
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import QGridLayout, QLabel, QListWidget, QSplitter, QTabWidget, QTextEdit, QToolBar, QVBoxLayout, QWidget
+from qtpy.QtCore import Signal
+from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
 class CollapsibleWidget(QWidget):
