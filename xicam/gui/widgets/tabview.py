@@ -12,6 +12,7 @@ class TabView(QTabWidget):
         headermodel: QStandardItemModel = None,
         selectionmodel: QItemSelectionModel = None,
         widgetcls=None,
+        stream=None,
         field=None,
         bindings: List[tuple] = [],
         **kwargs,
@@ -22,6 +23,7 @@ class TabView(QTabWidget):
         ----------
         model
         widgetcls
+        stream
         field
         bindings
             A list of tuples with pairs of bindings, s.t. the one item is the name of the attribute on widget cls holding a
@@ -40,6 +42,7 @@ class TabView(QTabWidget):
 
         if headermodel:
             self.setHeaderModel(headermodel)
+        self.stream = stream
         self.field = field
         self.bindings = bindings
 
@@ -75,10 +78,10 @@ class TabView(QTabWidget):
                 if self.widget(i).header == itemdata:
                     continue
             try:
-                newwidget = self.widgetcls(itemdata, "primary", self.field, **self.kwargs)
+                newwidget = self.widgetcls(itemdata, self.stream, self.field, **self.kwargs)
             except Exception as ex:
                 msg.logMessage(
-                    f"A widget of type {self.widgetcls} could not be initialized with args: {itemdata, self.field, self.kwargs}"
+                    f"A widget of type {self.widgetcls} could not be initialized with args: {itemdata, self.stream, self.field, self.kwargs}"
                 )
                 msg.logError(ex)
                 self.headermodel.removeRow(i)
