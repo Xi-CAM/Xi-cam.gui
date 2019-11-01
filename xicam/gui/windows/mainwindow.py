@@ -107,12 +107,13 @@ class XicamMainWindow(QMainWindow):
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
+
+        self.readSettings()
         # Wireup default widgets
         defaultstage["left"].sigOpen.connect(self.open)
         defaultstage["left"].sigOpen.connect(print)
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
-        self.settings = QSettings("camera", "xicam")
-        self.readSettings(self.settings)
+
 
     def open(self, header):
         if isinstance(header, CatalogEntry):
@@ -222,15 +223,14 @@ class XicamMainWindow(QMainWindow):
         super(XicamMainWindow, self).mousePressEvent(event)
 
     def closeEvent(self, event):
-        self.settings.setValue("geometry", self.saveGeometry())
-        self.settings.setValue("windowState", self.saveState())
+        QSettings().setValue("geometry", self.saveGeometry())
         QMainWindow.closeEvent(self, event)
 
-    def readSettings(self, settings):
-        if self.settings.value("geometry") is not None:
-            self.restoreGeometry(self.settings.value("geometry"))
-        if self.settings.value("windowState") is not None:
-            self.restoreState(self.settings.value("windowState"))
+    def readSettings(self):
+        settings = QSettings()
+        if settings.value("geometry") is not None:
+            self.restoreGeometry(settings.value("geometry"))
+
 
 class Node(object):
     def __init__(self, object, name, children=None, parent=None):
