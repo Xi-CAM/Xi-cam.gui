@@ -116,6 +116,8 @@ class XicamMainWindow(QMainWindow):
 
 
     def open(self, header):
+        if self.currentGUIPlugin is None:
+            return
         if isinstance(header, CatalogEntry):
             self.currentGUIPlugin.appendCatalog(header)
         else:
