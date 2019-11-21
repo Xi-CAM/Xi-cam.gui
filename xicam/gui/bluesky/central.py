@@ -6,10 +6,8 @@ trying to setup a menu.
 
 import time
 
-from bluesky_browser.frameworks.qt.search import SearchWidget, SearchState
-# from bluesky_browser.frameworks.qt.summary import SummaryWidget
-from xicam.gui.bluesky.summary import SummaryWidget
-
+from .search import SearchWidget, SearchState
+from .summary import SummaryWidget
 from qtpy.QtCore import QDateTime, Qt
 from qtpy.QtWidgets import (
     QWidget,
