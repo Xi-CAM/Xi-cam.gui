@@ -44,13 +44,35 @@ class PreviewWidget(GraphicsLayoutWidget):
         else:
             self.preview_catalog(data)
 
+    def schema(self):
+        saxs_schema = {
+            "techniques": [
+                {
+                    "technique": "preview",
+                    "configuration": {
+
+                    },
+                    "data_mapping": {
+
+                        "data_image": [
+                            "primary",
+                            "fccd_image"
+                        ]
+                    },
+                    "version": 0
+                },
+            ]}
+
+        return saxs_schema
+
     def preview_catalog(self, catalog: BlueskyRun):
         try:
-            dask_array = catalog.primary.to_dask()
-            fields = dask_array.keys()
-            # Filter out seq num and uid
-            field = next(field for field in fields if not field in ["seq_num", "uid"])
-            data = dask_array[field]
+            catalog.metadata.update(self.schema())
+            preview_technique = next(technique for technique in catalog.metadata['techniques'] if technique['technique'] == 'preview')
+            stream = preview_technique['data_mapping']['data_image'][0]
+            field = preview_technique['data_mapping']['data_image'][1]
+            x_array = getattr(catalog, stream).to_dask()
+            data = x_array[field]
             for i in range(len(data.shape) - 2):
                 data = data[0]
             self.setImage(np.asarray(data.compute()))

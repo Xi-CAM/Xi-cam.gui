@@ -52,8 +52,14 @@ class SearchingCatalogController(QWidget):
             """Emit each selected and opened catalog to sigOpen"""
             [self.sigOpen.emit(item) for item in my_list]
 
+        def emit_previewed_catalog(my_list):
+            """Emit first item in list of single-selected items"""
+            if my_list:
+                self.sigPreview.emit(my_list[0])
+
         # connect the open_entries in the search model to sigOpen
         self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
+        self.centralWidget.search_model.selected_result.connect(emit_previewed_catalog)
         self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
         layout.addWidget(self.centralWidget)
 
