@@ -12,7 +12,7 @@ import queue
 import threading
 import time
 
-from qtpy.QtCore import Qt, Signal, QThread
+from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -27,6 +27,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QTableView,
+    QMenu,
     )
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
@@ -73,6 +74,7 @@ class SearchState(ConfigurableQObject):
     """
     new_results_catalog = Signal([])
     new_results_catalog = Signal([])
+    sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
@@ -90,7 +92,6 @@ class SearchState(ConfigurableQObject):
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
         self.reload_event = threading.Event()
-
         search_state = self
 
         super().__init__()
@@ -238,6 +239,7 @@ class SearchState(ConfigurableQObject):
                 row.append(item)
             self.search_results_model.appendRow(row)
         if counter:
+            self.sig_update_header.emit()
             duration = time.monotonic() - t0
             log.debug("Displayed %d new results (%.3f s).", counter, duration)
         self.show_results_event.set()
@@ -310,7 +312,6 @@ class SearchResultsModel(QStandardItemModel):
     def on_until_time_changed(self, datetime):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
-
 
 class SearchInputWidget(QWidget):
     """
@@ -407,6 +408,15 @@ class SearchResultsWidget(QTableView):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.setAlternatingRowColors(True)
 
+    def hide_hidden_columns(self):
+        hidden_columns = QSettings().value("catalog.columns.hidden")
+        if hidden_columns is None:
+            return
+        header = self.horizontalHeader()
+        current_column_names = [str(self.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
+        for column_name in hidden_columns:
+            if column_name in current_column_names:
+                header.setSectionHidden(current_column_names.index(column_name), True)
 
 class SearchWidget(QWidget):
     """
@@ -414,16 +424,63 @@ class SearchWidget(QWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
-
         layout = QVBoxLayout()
         layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
         self.setLayout(layout)
+
+        header = self.search_results_widget.horizontalHeader()
+        header.setContextMenuPolicy(Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.header_menu)
+       
+    def hide_column(self, header, column_name, position):
+        '''
+        Hide a column, adding the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden")
+        if hidden_columns is None:
+            hidden_columns = set()
+        hidden_columns.add(column_name)
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(position, True)
+
+    def unhide_column(self, header, column_name):
+        '''
+        Unhide a column, removing the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden")
+        current_column_names = [str(header.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
+        position = current_column_names.index(column_name)
+        if hidden_columns is None:
+            hidden_columns = set()
+        else:
+            hidden_columns.remove(column_name)
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(position, False)
+
+    def header_menu(self, position):
+        '''
+        Creates a menu allowing users to show and hide columns
+        '''
+        header = self.sender()  # type: QHeaderView
+        index = header.logicalIndexAt(position)
+        menu = QMenu("Options")
+        action = menu.addAction("Hide Column")  # type: QAction
+        column_name = str(header.model().headerData(index, Qt.Horizontal))
+        action.triggered.connect(lambda: self.hide_column(header, column_name, index))
+        show_columns_menu = menu.addMenu("Show Columns")
+
+        for i in range(header.count()):
+            if header.isSectionHidden(i):
+                column_name = str(header.model().headerData(i, Qt.Horizontal))
+                action = show_columns_menu.addAction(column_name)
+                action.triggered.connect(lambda: self.unhide_column(header, column_name))
+
+        menu.exec_(header.mapToGlobal(position))
 
 
 class SkipRow(Exception):
