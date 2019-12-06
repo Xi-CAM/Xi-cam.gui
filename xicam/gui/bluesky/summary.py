@@ -11,14 +11,11 @@ from qtpy.QtWidgets import (
 
 
 class SummaryWidget(QWidget):
-    open = Signal([str, list])
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_label = QLabel()
-        self.open_individually_button = QPushButton('Open')
-        self.open_individually_button.setEnabled(False)
-        self.open_individually_button.clicked.connect(self._open_individually)
+
         self.copy_uid_button = QPushButton('Copy UID to Clipboard')
         self.copy_uid_button.setEnabled(False)
         self.copy_uid_button.clicked.connect(self._copy_uid)
@@ -29,7 +26,6 @@ class SummaryWidget(QWidget):
         uid_layout.addWidget(self.uid_label)
         uid_layout.addWidget(self.copy_uid_button)
         layout = QVBoxLayout()
-        layout.addWidget(self.open_individually_button)
         layout.addLayout(uid_layout)
         layout.addWidget(self.streams)
         self.setLayout(layout)
@@ -42,10 +38,6 @@ class SummaryWidget(QWidget):
     def _copy_uid(self):
         QApplication.clipboard().setText(self.uid)
 
-    def _open_individually(self):
-        for entry in self.entries:
-            self.open.emit(None, [entry])
-
 
     def set_entries(self, entries):
         self.entries.clear()
@@ -54,15 +46,12 @@ class SummaryWidget(QWidget):
             self.uid_label.setText('')
             self.streams.setText('')
             self.copy_uid_button.setEnabled(False)
-            self.open_individually_button.setEnabled(False)
         elif len(entries) == 1:
             entry, = entries
             run = entry()
             self.uid = run.metadata['start']['uid']
             self.uid_label.setText(self.uid[:8])
             self.copy_uid_button.setEnabled(True)
-            self.open_individually_button.setEnabled(True)
-            self.open_individually_button.setText('Open')
             num_events = (run.metadata['stop'] or {}).get('num_events')
             if num_events:
                 self.streams.setText(
@@ -77,5 +66,3 @@ class SummaryWidget(QWidget):
             self.uid_label.setText('(Multiple Selected)')
             self.streams.setText('')
             self.copy_uid_button.setEnabled(False)
-            self.open_individually_button.setText('Open individually')
-            self.open_individually_button.setEnabled(True)
