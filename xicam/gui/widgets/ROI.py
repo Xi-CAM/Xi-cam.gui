@@ -24,12 +24,7 @@ class ROIProcessingPlugin(ProcessingPlugin):
         self.name = f"ROI #{self.ROI.index}"
 
     def evaluate(self):
-        # TODO -- don't need to do scene matching if we are not using ROI.getArrayRegion
-        # Add ROI to same scene as image
-        # (workflow serialization changes the obj refs, they need to be the same for ROI.getArrayRegion)
-        image_scene = self.image.value.scene()
-        image_scene.addItem(self.ROI)
-        self.region.value = self.ROI.getArrayRegion(self.data.value, self.image.value)
+        self.region.value = self.ROI.getLabelArray(self.data.value, self.image.value)
         self.roi.value = self.region.value.astype(np.bool)
 
     @property
