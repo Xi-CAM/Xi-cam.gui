@@ -174,12 +174,20 @@ class SearchState(ConfigurableQObject):
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+
+        log.debug('{} check_for_new_entries started '.format(datetime.now().strftime("%H:%M:%S.%f")))
+        items = self._results_catalog.items()
+        log.debug('{} check_for_new_entries items called'.format(datetime.now().strftime("%H:%M:%S.%f")))
+        for uid, entry in itertools.islice(items, MAX_SEARCH_RESULTS):
+            log.debug('{} check_for_new_entries items called 1'.format(datetime.now().strftime("%H:%M:%S.%f")))
             if uid in self._results:
                 continue
+            log.debug('{} check_for_new_entries items called 2'.format(datetime.now().strftime("%H:%M:%S.%f")))
             self._results.append(uid)
+            log.debug('{} check_for_new_entries items called 3'.format(datetime.now().strftime("%H:%M:%S.%f")))
             self._new_entries.put(entry)
-
+            log.debug('{} check_for_new_entries items called 4'.format(datetime.now().strftime("%H:%M:%S.%f")))
+        log.debug('{} check_for_new_entries complete'.format(datetime.now().strftime("%H:%M:%S.%f")))
     def process_queries(self):
         # If there is a backlog, process only the newer query.
         block = True
@@ -194,6 +202,8 @@ class SearchState(ConfigurableQObject):
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
+        log.debug('Search complete(%.3f s).',
+                  time.monotonic() - t0)
         self.check_for_new_entries()
         duration = time.monotonic() - t0
         log.debug('Query yielded %r results (%.3f s).',
@@ -215,30 +225,42 @@ class SearchState(ConfigurableQObject):
         self.query_queue.put(query)
 
     def show_results(self):
+        log.debug('{} show_results 1 '.format(datetime.now().strftime("%H:%M:%S.%f")))
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
-
+        log.debug('{} show_results 2 '.format(datetime.now().strftime("%H:%M:%S.%f")))
         while not self._new_entries.empty():
             counter += 1
+            log.debug('{} show_results 2.1 '.format(datetime.now().strftime("%H:%M:%S.%f")))
             entry = self._new_entries.get()
             row = []
             try:
+                log.debug('{} show_results 2.2 '.format(datetime.now().strftime("%H:%M:%S.%f")))
                 row_data = self.apply_search_result_row(entry)
+                log.debug('{} show_results 2.3 '.format(datetime.now().strftime("%H:%M:%S.%f")))
             except SkipRow:
                 continue
             if not header_labels_set:
+                log.debug('{} show_results 2.4 '.format(datetime.now().strftime("%H:%M:%S.%f")))
                 # Set header labels just once.
                 self.search_results_model.setHorizontalHeaderLabels(list(row_data))
+                log.debug('{} show_results 2.5 '.format(datetime.now().strftime("%H:%M:%S.%f")))
                 header_labels_set = True
             for value in row_data.values():
+                log.debug('{} show_results 2.6 '.format(datetime.now().strftime("%H:%M:%S.%f")))
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
+                log.debug('{} show_results 2.7 '.format(datetime.now().strftime("%H:%M:%S.%f")))
                 row.append(item)
+                log.debug('{} show_results 2.8 '.format(datetime.now().strftime("%H:%M:%S.%f")))
             self.search_results_model.appendRow(row)
+            log.debug('{} show_results 2.9 '.format(datetime.now().strftime("%H:%M:%S.%f")))
+        log.debug('{} show_results 3 '.format(datetime.now().strftime("%H:%M:%S.%f")))
         if counter:
             duration = time.monotonic() - t0
+            log.debug('{} show_results 4 '.format(datetime.now().strftime("%H:%M:%S.%f")))
             log.debug("Displayed %d new results (%.3f s).", counter, duration)
         self.show_results_event.set()
 
