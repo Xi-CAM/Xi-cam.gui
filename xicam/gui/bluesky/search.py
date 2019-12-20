@@ -346,6 +346,8 @@ class SearchInputWidget(QWidget):
 
         date_collapse.addRow('Since:', self.since_widget)
         date_collapse.addRow('Until:', self.until_widget)
+        # Show the Dates widget initially uncollapsed
+        date_collapse.toggleButton.setChecked(True)
 
         layout = QVBoxLayout()
         # layout.addLayout(since_layout)
