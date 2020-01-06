@@ -122,7 +122,11 @@ class SearchState(ConfigurableQObject):
         class ProcessQueriesThread(QThread):
             def run(self):
                 while True:
-                    search_state.process_queries()
+                    try:
+                        search_state.process_queries()
+                    except Exception as e:
+                        log.error(e)
+                  
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
@@ -195,6 +199,7 @@ class SearchState(ConfigurableQObject):
                 if block:
                     query = self.query_queue.get()
                 break
+        print(query)
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
