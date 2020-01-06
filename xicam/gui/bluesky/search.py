@@ -409,14 +409,13 @@ class SearchResultsWidget(QTableView):
         self.setAlternatingRowColors(True)
 
     def hide_hidden_columns(self):
-        hidden_columns = QSettings().value("catalog.columns.hidden")
-        if hidden_columns is None:
-            return
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         header = self.horizontalHeader()
         current_column_names = [str(self.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
-        for column_name in hidden_columns:
-            if column_name in current_column_names:
-                header.setSectionHidden(current_column_names.index(column_name), True)
+        current_hidden_names = hidden_columns.intersection(set(current_column_names))
+        for name in current_hidden_names:
+            header.setSectionHidden(current_column_names.index(name), True)
+
 
 class SearchWidget(QWidget):
     """
@@ -441,9 +440,7 @@ class SearchWidget(QWidget):
         '''
         Hide a column, adding the column from the list of hidden columns in QSettings
         '''
-        hidden_columns = QSettings().value("catalog.columns.hidden")
-        if hidden_columns is None:
-            hidden_columns = set()
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         hidden_columns.add(column_name)
         QSettings().setValue("catalog.columns.hidden", hidden_columns)
         header.setSectionHidden(position, True)
@@ -452,13 +449,13 @@ class SearchWidget(QWidget):
         '''
         Unhide a column, removing the column from the list of hidden columns in QSettings
         '''
-        hidden_columns = QSettings().value("catalog.columns.hidden")
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         current_column_names = [str(header.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
         position = current_column_names.index(column_name)
-        if hidden_columns is None:
-            hidden_columns = set()
-        else:
+        try:
             hidden_columns.remove(column_name)
+        except KeyError as ex:
+            raise(KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
         QSettings().setValue("catalog.columns.hidden", hidden_columns)
         header.setSectionHidden(position, False)
 
