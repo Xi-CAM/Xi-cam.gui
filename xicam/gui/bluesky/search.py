@@ -29,6 +29,9 @@ from qtpy.QtWidgets import (
     QTableView,
     QMenu,
     )
+
+from xicam.core import msg
+
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
 
@@ -435,29 +438,37 @@ class SearchWidget(QWidget):
         header = self.search_results_widget.horizontalHeader()
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.header_menu)
+        
+    def _current_column_names(self, header):
+        return [self._current_column_name(header, i) for i in range(header.count())]
+
+    def _current_column_name(self, header, index):
+        return str(header.model().headerData(index, Qt.Horizontal))
        
-    def hide_column(self, header, column_name, position):
+    def hide_column(self, header, logicalIndex):
         '''
         Hide a column, adding the column from the list of hidden columns in QSettings
         '''
         hidden_columns = QSettings().value("catalog.columns.hidden") or set()
-        hidden_columns.add(column_name)
+        if len(hidden_columns) == header.count() - 1:
+            msg.notifyMessage("Only one column is left to hide, cannot hide all of them.")
+            return
+        hidden_columns.add(self._current_column_name(header, logicalIndex))
         QSettings().setValue("catalog.columns.hidden", hidden_columns)
-        header.setSectionHidden(position, True)
+        header.setSectionHidden(logicalIndex, True)
 
-    def unhide_column(self, header, column_name):
+    def unhide_column(self, header, logicalIndex):
         '''
         Unhide a column, removing the column from the list of hidden columns in QSettings
         '''
         hidden_columns = QSettings().value("catalog.columns.hidden") or set()
-        current_column_names = [str(header.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
-        position = current_column_names.index(column_name)
+        column_name = self._current_column_name(header, logicalIndex)
         try:
             hidden_columns.remove(column_name)
         except KeyError as ex:
             raise(KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
         QSettings().setValue("catalog.columns.hidden", hidden_columns)
-        header.setSectionHidden(position, False)
+        header.setSectionHidden(logicalIndex, False)
 
     def header_menu(self, position):
         '''
@@ -468,14 +479,16 @@ class SearchWidget(QWidget):
         menu = QMenu("Options")
         action = menu.addAction("Hide Column")  # type: QAction
         column_name = str(header.model().headerData(index, Qt.Horizontal))
-        action.triggered.connect(lambda: self.hide_column(header, column_name, index))
+        action.triggered.connect(lambda: self.hide_column(header, index))
         show_columns_menu = menu.addMenu("Show Columns")
 
         for i in range(header.count()):
             if header.isSectionHidden(i):
                 column_name = str(header.model().headerData(i, Qt.Horizontal))
                 action = show_columns_menu.addAction(column_name)
-                action.triggered.connect(lambda: self.unhide_column(header, column_name))
+                action.triggered.connect(functools.partial(self.unhide_column, header, i))
+                # why does below work, but not: lambda: self.unhide_column(header, i)
+                # action.triggered.connect(lambda triggered, logicalIndex=i: self.unhide_column(header, logicalIndex))
 
         menu.exec_(header.mapToGlobal(position))
 
