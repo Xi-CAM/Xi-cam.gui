@@ -355,7 +355,7 @@ class RectROI(BetterROI, RectROI):
         self.parameter().child('width').setValue(self.width)
         self.parameter().child('height').setValue(self.height)
 
-    def getLabelArray(self, arr, img=None):
+    def getLabelArray(self, arr, img:pg.ImageItem = None):
         # TODO : make more generic for all rectangle ROIs, segmented (multi-labeled) and non-segmented (single-labeled)
         dim_0, dim_1 = arr.shape
 
@@ -366,14 +366,16 @@ class RectROI(BetterROI, RectROI):
 
         mask = np.zeros_like(arr)
 
-        # Generate label mask, note that y is dimension 0
         label_mask = np.fromfunction(lambda y, x: (x + .5 > min_x) &
                                                   (x + .5 < max_x) &
                                                   (y + .5 > min_y) &
                                                   (y + .5 < max_y), (dim_0, dim_1))
         mask[label_mask] = 1
 
-        return mask
+        # Invert y
+        # FIXME -- use image transform above with passed image item
+        return mask[::-1,::]
+
 
 class LineROI(BetterROI, LineROI):
     def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
