@@ -38,6 +38,7 @@ class CentralWidget(QWidget):
         left_pane.addWidget(self.summary_widget)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         splitter = QSplitter(Qt.Horizontal)
         layout.addWidget(splitter)
         splitter.addWidget(left_pane)

@@ -52,7 +52,7 @@ class SearchingCatalogController(QWidget):
 
         # connect the open_entries in the search model to sigOpen
         self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
-        self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
+        self.centralWidget.search_widget.search_results_widget.sigOpen.connect(emit_opened_catalogs)
         layout.addWidget(self.centralWidget)
 
 

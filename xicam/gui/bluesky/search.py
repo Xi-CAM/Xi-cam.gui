@@ -25,15 +25,18 @@ from qtpy.QtWidgets import (
     QLabel,
     QLineEdit,
     QVBoxLayout,
+    QFormLayout,
     QWidget,
     QTableView,
     QMenu,
+    QAction
     )
 
 from xicam.core import msg
 
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
+from xicam.gui.widgets.collapsiblewidget import CollapsiblePanel
 
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
@@ -335,25 +338,30 @@ class SearchInputWidget(QWidget):
         mongo_query_help_button.setText('?')
         search_bar_layout.addWidget(mongo_query_help_button)
         mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
+        self.query_widget = CollapsiblePanel(title='Query', layout=search_bar_layout)
+
+        layout = QFormLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        date_collapse = CollapsiblePanel(title='Dates', layout=layout)
 
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
         self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        since_layout = QHBoxLayout()
-        since_layout.addWidget(QLabel('Since:'))
-        since_layout.addWidget(self.since_widget)
 
         self.until_widget = QDateTimeEdit()
         self.until_widget.setCalendarPopup(True)
         self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        until_layout = QHBoxLayout()
-        until_layout.addWidget(QLabel('Until:'))
-        until_layout.addWidget(self.until_widget)
+
+        date_collapse.addRow('Since:', self.since_widget)
+        date_collapse.addRow('Until:', self.until_widget)
+        # Show the Dates widget initially uncollapsed
+        date_collapse.toggleButton.setChecked(True)
 
         layout = QVBoxLayout()
-        layout.addLayout(since_layout)
-        layout.addLayout(until_layout)
-        layout.addLayout(search_bar_layout)
+        # layout.addLayout(since_layout)
+        # layout.addLayout(until_layout)
+        layout.addWidget(date_collapse)
+        layout.addWidget(self.query_widget)
         self.setLayout(layout)
 
     def mark_custom_query(self, valid):
@@ -405,6 +413,8 @@ class SearchResultsWidget(QTableView):
     """
     Table of search results
     """
+    sigOpen = Signal(str, list)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -416,6 +426,24 @@ class SearchResultsWidget(QTableView):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.setAlternatingRowColors(True)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+        self.menu = QMenu()
+        standardActions = [
+            QAction("Open", self),
+        ]
+        self.menu.addActions(standardActions)
+        standardActions[0].triggered.connect(self.open)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+
+    def open(self):
+        uids = [self.model().itemFromIndex(index).data(Qt.DisplayRole) for index in
+                self.selectionModel().selectedRows()]
+        runs = [self.model().search_state._results_catalog[uid] for uid in uids]
+        self.sigOpen.emit("blah?", runs)
+        
     def hide_hidden_columns(self):
         hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         header = self.horizontalHeader()
