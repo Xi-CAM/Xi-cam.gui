@@ -3,48 +3,65 @@ from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal
 from qtpy.QtGui import QIcon, QPixmap
 from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
 from xicam.core.execution.workflow import Workflow
+from xicam.plugins import OperationPlugin
 from pyqtgraph.parametertree import ParameterTree, Parameter
+from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from xicam.gui.static import path
 from xicam.plugins import manager as pluginmanager
 from functools import partial
+from typing import List
 
 # WorkflowEditor
-#  WorkflowProcessEditor
+#  WorkflowOperationEditor
 # WorkflowWidget
 #  LinearWorkflowView
 #   WorkflowModel
 
 
 class WorkflowEditor(QSplitter):
-    sigWorkflowChanged = Signal(object)
+    sigWorkflowChanged = Signal()
 
     def __init__(self, workflow: Workflow):
         super(WorkflowEditor, self).__init__()
+        self.workflow = workflow
         self.setOrientation(Qt.Vertical)
 
-        self.processeditor = WorkflowProcessEditor()
+        self.operationeditor = WorkflowOperationEditor()
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
-        self.addWidget(self.processeditor)
+        self.addWidget(self.operationeditor)
         self.addWidget(WorkflowWidget(self.workflowview))
 
-        self.workflowview.sigShowParameter.connect(lambda parameter: self.setParameters(parameter))
+        self.workflowview.sigShowParameter.connect(self.setParameters)
 
         workflow.attach(self.sigWorkflowChanged.emit)
 
-    def setParameters(self, parameter: Parameter):
+    def setFixed(self, operation: OperationPlugin, param_name: str, value):
+        operation.fixed[param_name] = value
 
-        parameter.blockSignals(True)
-        for child in parameter.children():
+    def setValue(self, operation: OperationPlugin, param_name: str, value):
+        operation.filled_values[param_name] = value
+
+    def setParameters(self, operation: OperationPlugin):
+        parameters = operation.as_parameter()
+        group = GroupParameter(name='blah', children=parameters)
+        for child, parameter in zip(group.children(), parameters):
+            # wireup signals to update the workflow
+            if parameter.get('fixable'):
+                child.sigFixToggled.connect(partial(self.setFixed, operation, child.name))
+            child.sigValueChanged.connect(partial(self.setValue, operation, child.name))
+
+        group.blockSignals(True)
+        for child in group.children():
             child.blockSignals(True)
-        self.processeditor.setParameters(parameter, showTop=False)
+        self.operationeditor.setParameters(group, showTop=False)
         QApplication.processEvents()
-        parameter.blockSignals(False)
-        for child in parameter.children():
+        group.blockSignals(False)
+        for child in group.children():
             child.blockSignals(False)
 
 
-class WorkflowProcessEditor(ParameterTree):
+class WorkflowOperationEditor(ParameterTree):
     pass
 
 
@@ -70,7 +87,7 @@ class WorkflowWidget(QWidget):
         # self.toolbar.addAction(QIcon(path('icons/up.png')), 'Move Up')
         # self.toolbar.addAction(QIcon(path('icons/down.png')), 'Move Down')
         self.toolbar.addAction(QIcon(path("icons/folder.png")), "Load Workflow")
-        self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteProcess)
+        self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteOperation)
 
         v = QVBoxLayout()
         v.addWidget(self.view)
@@ -81,27 +98,28 @@ class WorkflowWidget(QWidget):
     def populateFunctionMenu(self):
         self.functionmenu.clear()
         sortingDict = {}
-        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
-            if not typeOfProcessingPlugin in sortingDict.keys():
-                sortingDict[typeOfProcessingPlugin] = []
-            sortingDict[typeOfProcessingPlugin].append(plugin)
+        for plugin in pluginmanager.getPluginsOfCategory("OperationPlugin"):
+            typeOfOperationPlugin = plugin.plugin_object.getCategory()
+            if not typeOfOperationPlugin in sortingDict.keys():
+                sortingDict[typeOfOperationPlugin] = []
+            sortingDict[typeOfOperationPlugin].append(plugin)
         for key in sortingDict.keys():
             self.functionmenu.addSeparator()
             self.functionmenu.addAction(key)
             self.functionmenu.addSeparator()
             for plugin in sortingDict[key]:
-                self.functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
+                self.functionmenu.addAction(plugin.name,
+                                            partial(self.add_operation, plugin.plugin_object, autoconnectall=True))
 
-    def addProcess(self, process, autoconnectall=True):
-        self.view.model().workflow.addProcess(process(), autoconnectall)
+    def addOperation(self, operation, autoconnectall=True):
+        self.view.model().workflow.add_operation(operation(), autoconnectall)
         print("selected new row:", self.view.model().rowCount() - 1)
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
-    def deleteProcess(self):
+    def deleteOperation(self):
         for index in self.view.selectedIndexes():
-            process = self.view.model().workflow._processes[index.row()]
-            self.view.model().workflow.removeProcess(process)
+            operation = self.view.model().workflow.operations[index.row()]
+            self.view.model().workflow.removeOperation(operation)
 
 
 class LinearWorkflowView(QTableView):
@@ -132,10 +150,10 @@ class LinearWorkflowView(QTableView):
 
     def selectionChanged(self, selected=None, deselected=None):
         if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
-            process = self.model().workflow._processes[self.selectedIndexes()[0].row()]
-            self.sigShowParameter.emit(process.parameter)
+            operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]
+            self.sigShowParameter.emit(operation)
         else:
-            self.sigShowParameter.emit(Parameter(name="empty"))
+            self.sigShowParameter.emit(None)
         for child in self.children():
             if hasattr(child, "repaint"):
                 child.repaint()
@@ -165,9 +183,9 @@ class WorkflowModel(QAbstractTableModel):
 
     def dropMimeData(self, data, action, row, column, parent):
         srcindex = int(data.text())
-        process = self.workflow._processes[srcindex]
-        self.workflow.removeProcess(process)
-        self.workflow.insertProcess(parent.row(), process)
+        operation = self.workflow.operations[srcindex]
+        self.workflow.remove_operation(operation)
+        self.workflow.insert_operation(parent.row(), operation)
         self.workflow.autoConnectAll()
         return True
 
@@ -180,19 +198,23 @@ class WorkflowModel(QAbstractTableModel):
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
 
     def rowCount(self, *args, **kwargs):
-        return len(self.workflow._processes)
+        return len(self.workflow.operations)
 
     def columnCount(self, *args, **kwargs):
         return 2
 
     def data(self, index, role):
-        process = self.workflow._processes[index.row()]
+        operation = self.workflow.operations[index.row()]
         if not index.isValid():
             return None
         elif role != Qt.DisplayRole:
             return None
         elif index.column() == 0:
-            return partial(self.workflow.toggleDisableProcess, process, autoconnectall=True)
+            def toggle_disabled(*args, **kwargs):
+                self.workflow.toggle_disabled(operation, *args, **kwargs)
+                self.workflow.auto_connect_all()
+
+            return toggle_disabled
         elif index.column() == 1:
             # return getattr(process, 'name', process.__class__.__name__)
             return None
@@ -210,23 +232,23 @@ class HintsDelegate(QItemDelegate):
     def paint(self, painter, option, index):
         if not (self.view.indexWidget(index)):
             # selected = index in map(lambda index: index.row, self.view.selectedIndexes())
-            process = self.view.model().workflow._processes[index.row()]
-            widget = HintsWidget(process, self.view, index)
+            operation = self.view.model().workflow.operations[index.row()]
+            widget = HintsWidget(operation, self.view, index)
             self.view.setIndexWidget(index, widget)
 
 
 class HintsWidget(QWidget):
-    def __init__(self, process, view, index):
+    def __init__(self, operation, view, index):
         super(HintsWidget, self).__init__()
         self.view = view
         self.setLayout(QGridLayout())
-        self.layout().addWidget(QLabel(process.name), 0, 0, 1, 2)
-        self.hints = process.hints
+        self.layout().addWidget(QLabel(operation.name), 0, 0, 1, 2)
+        self.hints = operation.hints
 
         enabledhints = [hint for hint in self.hints if hint.enabled]
 
         for i, hint in enumerate(enabledhints):
-            enablebutton = QPushButton(icon=enableicon)
+            enablebutton = QPushButton(icon=enableicon())
             sp = QSizePolicy()
             sp.setWidthForHeight(True)
             enablebutton.setSizePolicy(sp)
@@ -272,7 +294,7 @@ class DisableDelegate(QItemDelegate):
             button.setText("i")
             button.setAutoRaise(True)
 
-            button.setIcon(enableicon)
+            button.setIcon(enableicon())
             button.setCheckable(True)
             sp = QSizePolicy()
             sp.setWidthForHeight(True)
@@ -282,6 +304,8 @@ class DisableDelegate(QItemDelegate):
             self._parent.setIndexWidget(index, button)
 
 
-enableicon = QIcon()
-enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
-enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
+def enableicon():
+    enableicon = QIcon()
+    enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
+    enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
+    return enableicon
