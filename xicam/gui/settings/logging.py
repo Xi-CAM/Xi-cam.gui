@@ -16,11 +16,12 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                     name="Log Directory",
                     values=OrderedDict(
                         [
-                            (log_dir, None),
+                            ("User cache", log_dir),
                         ]
                     ),
-                    value=log_dir,
+                    value="User cache",
                     type="list",
-                )
+                    tip=log_dir
+                ),
             ],
         )
