@@ -14,14 +14,10 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
             [
                 dict(
                     name="Log Directory",
-                    values=OrderedDict(
-                        [
-                            ("User cache", log_dir),
-                        ]
-                    ),
-                    value="User cache",
-                    type="list",
-                    tip=log_dir
+                    value=log_dir,
+                    type="text",
+                    readonly=True,
+                    tip="Location where Xi-CAM writes its log files."
                 ),
             ],
         )
