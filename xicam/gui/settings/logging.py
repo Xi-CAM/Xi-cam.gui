@@ -1,3 +1,4 @@
+from qtpy.QtCore import QSettings
 from qtpy.QtGui import QIcon
 
 from xicam.core import msg
@@ -34,3 +35,4 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
 
     def apply(self):
         msg.stream_handler.setLevel(self["Log Level"])
+        QSettings().setValue(msg.STREAM_LOG_LEVEL_SETTINGS_NAME, self["Log Level"])
