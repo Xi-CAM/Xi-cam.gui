@@ -84,9 +84,7 @@ class ConfigDialog(QDialog):
         if self.lastwidget:
             self.pagesWidget.addWidget(self.lastwidget)
             self.pagesWidget.setCurrentWidget(self.lastwidget)
-        # Do we need this? The settings should already be loaded by when requesting a show
-        # (see XicamMainWindow.__init__, where the settings menu item is created and connected)
-        # self.restore()
+        self.restore()
         super(ConfigDialog, self).show()
 
     def changePage(self, current, previous):
