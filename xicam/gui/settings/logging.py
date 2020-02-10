@@ -10,6 +10,29 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
     """Settings plugin for logging information and parameterization.
     """
     def __init__(self):
+
+        def msg_levels(recommended=""):
+            """Returns a dictionary mapping logging level names to their respective integer values.
+
+            Parameters
+            ----------
+            recommended
+                Optional string which will mark a logging level as recommended (for use in the list parameter)
+                (default is "", which will not mark any levels).
+
+            Returns
+            -------
+                Dictionary that maps log level names to their values, optionally with one name marked as recommended.
+
+            """
+            levels = dict()#{v: k for k, v in msg.levels.items()}
+            for level, level_name in msg.levels.items():
+                if recommended and recommended == level_name:
+                    levels[level_name + " (recommended)"] = level
+                else:
+                    levels[level_name] = level
+            return levels
+
         super(LoggingSettingsPlugin, self).__init__(
             QIcon(str(path("icons/ellipsis.png"))),
             "Logging",
@@ -24,7 +47,7 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 # Allow users to configure the default log level for the xicam logger's FileHandler
                 dict(
                     name="File Log Level",
-                    values={v: k for k, v in msg.levels.items()},
+                    values=msg_levels(recommended="DEBUG"),
                     value="DEBUG",
                     type="list",
                     tip="Changes how much information is logged to the log file in 'Log Directory.'"
