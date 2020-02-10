@@ -21,18 +21,29 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                     type='str',
                     readonly=True,
                     tip="Location where Xi-CAM writes its logs to."),
-                # Allow users to configure the default log level for the xicam logger's StreamHandler
+                # Allow users to configure the default log level for the xicam logger's FileHandler
                 dict(
-                    name="Log Level",
+                    name="File Log Level",
                     values={v: k for k, v in msg.levels.items()},
                     value="DEBUG",
                     type="list",
-                    tip="How much information to output to the printed log messages (DEBUG gives the most information).",
+                    tip="Changes how much information is logged to the log file in 'Log Directory.'"
+                ),
+                # Allow users to configure the default log level for the xicam logger's StreamHandler
+                dict(
+                    name="Terminal Log Level",
+                    values={v: k for k, v in msg.levels.items()},
+                    value="DEBUG",
+                    type="list",
+                    tip="Changes how much information is logged to the system console / terminal.",
                 ),
             ],
         )
-        msg.stream_handler.setLevel(self["Log Level"])
+        msg.file_handler.setLevel(self["File Log Level"])
+        msg.stream_handler.setLevel(self["Terminal Log Level"])
 
     def apply(self):
-        msg.stream_handler.setLevel(self["Log Level"])
-        QSettings().setValue(msg.STREAM_LOG_LEVEL_SETTINGS_NAME, self["Log Level"])
+        msg.file_handler.setLevel(self["File Log Level"])
+        msg.stream_handler.setLevel(self["Terminal Log Level"])
+        QSettings().setValue(msg.FILE_LOG_LEVEL_SETTINGS_NAME, self["File Log Level"])
+        QSettings().setValue(msg.STREAM_LOG_LEVEL_SETTINGS_NAME, self["Terminal Log Level"])
