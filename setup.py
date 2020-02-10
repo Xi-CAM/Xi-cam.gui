@@ -111,7 +111,7 @@ setup(
             'logging = xicam.gui.settings.logging:LoggingSettingsPlugin',
             'appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin',
             'execution = xicam.gui.settings.execution:ExecutionSettingsPlugin',
-            'cammart = xicam.gui.cammart:CamMartSettingsPlugin'
+            'cammart = xicam.gui.cammart:CamMartSettingsPlugin',
             'venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin',
         ],
         'xicam.plugins.CatalogPlugin': [
