@@ -63,6 +63,8 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 ),
             ],
         )
+        msg.file_handler.setLevel(self[msg.FILE_LOG_LEVEL_SETTINGS_NAME])
+        msg.stream_handler.setLevel(self[msg.STREAM_LOG_LEVEL_SETTINGS_NAME])
 
     def apply(self):
         msg.file_handler.setLevel(self[msg.FILE_LOG_LEVEL_SETTINGS_NAME])
