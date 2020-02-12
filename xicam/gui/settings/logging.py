@@ -1,4 +1,3 @@
-from qtpy.QtCore import QSettings
 from qtpy.QtGui import QIcon
 
 from xicam.core import msg
@@ -13,6 +12,8 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
 
         def msg_levels(recommended=""):
             """Returns a dictionary mapping logging level names to their respective integer values.
+
+            Note that `msg.levels` gives us the reverse mapping that we want, from level to level name.
 
             Parameters
             ----------
@@ -35,7 +36,7 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
 
         super(LoggingSettingsPlugin, self).__init__(
             QIcon(str(path("icons/ellipsis.png"))),
-            "Logging",
+            msg.LOGGING_SETTINGS_NAME,
             [
                 # Show users where the log directory is, don't let them modify it though
                 dict(
@@ -46,27 +47,23 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                     tip="Location where Xi-CAM writes its logs to."),
                 # Allow users to configure the default log level for the xicam logger's FileHandler
                 dict(
-                    name="File Log Level",
+                    name=msg.FILE_LOG_LEVEL_SETTINGS_NAME,
                     values=msg_levels(recommended="DEBUG"),
-                    value="DEBUG",
+                    value=msg.DEFAULT_FILE_LOG_LEVEL,
                     type="list",
                     tip="Changes how much information is logged to the log file in 'Log Directory.'"
                 ),
                 # Allow users to configure the default log level for the xicam logger's StreamHandler
                 dict(
-                    name="Terminal Log Level",
-                    values={v: k for k, v in msg.levels.items()},
-                    value="DEBUG",
+                    name=msg.STREAM_LOG_LEVEL_SETTINGS_NAME,
+                    values=msg_levels(),
+                    value=msg.DEFAULT_STREAM_LOG_LEVEL,
                     type="list",
                     tip="Changes how much information is logged to the system console / terminal.",
                 ),
             ],
         )
-        msg.file_handler.setLevel(self["File Log Level"])
-        msg.stream_handler.setLevel(self["Terminal Log Level"])
 
     def apply(self):
-        msg.file_handler.setLevel(self["File Log Level"])
-        msg.stream_handler.setLevel(self["Terminal Log Level"])
-        QSettings().setValue(msg.FILE_LOG_LEVEL_SETTINGS_NAME, self["File Log Level"])
-        QSettings().setValue(msg.STREAM_LOG_LEVEL_SETTINGS_NAME, self["Terminal Log Level"])
+        msg.file_handler.setLevel(self[msg.FILE_LOG_LEVEL_SETTINGS_NAME])
+        msg.stream_handler.setLevel(self[msg.STREAM_LOG_LEVEL_SETTINGS_NAME])

@@ -52,8 +52,6 @@ class XicamMainWindow(QMainWindow):
 
         self._configdialog = ConfigDialog()
 
-        # Restore Settings
-        pluginmanager.attach(self._configdialog.restore)
         # Load plugins
         pluginmanager.collectPlugins()
 
