@@ -719,3 +719,36 @@ class ImageViewHistogramOverflowFix(ComposableItemImageView):
         if "imageItem" in kwargs:
             del kwargs["imageItem"]
         super(ImageViewHistogramOverflowFix, self).__init__(imageItem=imageItem, *args, **kwargs)
+
+
+class WindowedAveraging(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(WindowedAveraging, self).__init__(*args, **kwargs)
+        self.window = 100
+        self.leftbound = InfiniteLine(0, )
+        self.leftbound.setPen((255, 255, 0, 200), style=Qt.DashLine)
+        self.leftbound.setZValue(1)
+        self.rightbound = InfiniteLine(0, )
+        self.rightbound.setPen((255, 255, 0, 200), style=Qt.DashLine)
+        self.rightbound.setZValue(1)
+        self.ui.roiPlot.addItem(self.leftbound)
+        self.ui.roiPlot.addItem(self.rightbound)
+
+    def updateImage(self, autoHistogramRange=True):
+        super(WindowedAveraging, self).updateImage(autoHistogramRange)
+        min_t = max(0, int(self.timeLine.value() - self.window / 2))
+        max_t = min(len(self.image), int(self.timeLine.value() + self.window / 2))
+        self.leftbound.setValue(min_t)
+        self.rightbound.setValue(max_t)
+        image = np.average(self.image[min_t:max_t], axis=0)
+        self.imageItem.updateImage(image)
+
+
+if __name__ == "__main__":
+    from qtpy.QtWidgets import QApplication
+
+    app = QApplication([])
+    w = WindowedAveraging()
+    w.setImage(np.random.random((1000, 10, 10)))
+    w.show()
+    app.exec_()
