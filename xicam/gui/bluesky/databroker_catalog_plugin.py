@@ -52,8 +52,13 @@ class SearchingCatalogController(QWidget):
 
         # connect the open_entries in the search model to sigOpen
         self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
+        self.centralWidget.search_model.selected_result.connect(self.preview)
         self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
         layout.addWidget(self.centralWidget)
+
+    def preview(self, catalogs):
+        if catalogs:
+            self.sigPreview.emit(catalogs[0])
 
 
 class DatabrokerCatalogPlugin(CatalogPlugin):

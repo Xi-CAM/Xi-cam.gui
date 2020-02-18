@@ -84,7 +84,6 @@ class SearchState(ConfigurableQObject):
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
     new_results_catalog = Signal([])
-    new_results_catalog = Signal([])
     sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
 
