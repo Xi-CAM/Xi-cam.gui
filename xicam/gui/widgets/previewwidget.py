@@ -6,6 +6,7 @@ from qtpy.QtGui import QFont, QTransform
 from qtpy.QtWidgets import QSizePolicy
 
 from xicam.core.data import NonDBHeader
+from xicam.core import threads, msg
 
 
 class PreviewWidget(GraphicsLayoutWidget):
@@ -44,20 +45,6 @@ class PreviewWidget(GraphicsLayoutWidget):
         else:
             self.preview_catalog(data)
 
-    def preview_catalog(self, catalog: BlueskyRun):
-        try:
-            dask_array = catalog.primary.to_dask()
-            fields = dask_array.keys()
-            # Filter out seq num and uid
-            field = next(field for field in fields if not field in ["seq_num", "uid"])
-            data = dask_array[field]
-            for i in range(len(data.shape) - 2):
-                data = data[0]
-            self.setImage(np.asarray(data.compute()))
-        except IndexError:
-            self.imageitem.clear()
-            self.setText("UNKNOWN DATA FORMAT")
-
     def preview_header(self, header: NonDBHeader):
         try:
             data = header.meta_array()[0]
@@ -66,7 +53,7 @@ class PreviewWidget(GraphicsLayoutWidget):
             self.imageitem.clear()
             self.setText("UNKNOWN DATA FORMAT")
 
-    def setImage(self, imgdata):
+    def setImage(self, imgdata: np.ndarray):
         self.imageitem.clear()
         self.textitem.hide()
         self.imgdata = imgdata
@@ -74,8 +61,26 @@ class PreviewWidget(GraphicsLayoutWidget):
         self.imageitem.setTransform(QTransform(1, 0, 0, -1, 0, self.imgdata.shape[-2]))
         self.view.autoRange()
 
-    def setText(self, text):
+    def setText(self, text: str):
         self.textitem.setText(text)
         self.imageitem.clear()
         self.textitem.setVisible(True)
         self.view.autoRange()
+
+    def setException(self, ex: Exception):
+        self.imageitem.clear()
+        self.setText("UNKNOWN DATA FORMAT")
+        msg.logError(ex)
+        msg.logMessage("Error previewing data from catalog")
+
+    @threads.method(callback_slot=setImage, except_slot=setException)
+    def preview_catalog(self, catalog: BlueskyRun):
+        dask_array = catalog.primary.to_dask()
+        fields = dask_array.keys()
+        # Filter out seq num and uid
+        field = next(field for field in fields if not field in ["seq_num", "uid"] and len(dask_array[field].shape) > 2)
+
+        data = dask_array[field]
+        for i in range(len(data.shape) - 2):
+            data = data[0]
+        return np.asarray(data.compute())
