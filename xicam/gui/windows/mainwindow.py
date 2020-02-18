@@ -2,15 +2,16 @@ from functools import partial
 
 from intake.catalog import Catalog
 from intake.catalog.entry import CatalogEntry
-
-from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
-from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
-from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
-from xicam.plugins.guiplugin import PanelState
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings, QUrl
+from qtpy.QtGui import QDesktopServices, QIcon, QPixmap, QKeySequence, QFont
+from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, \
+    QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox, QMessageBox
+import versioneer
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import EntryPointPluginInfo
+from xicam.plugins.guiplugin import PanelState
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from xicam.core.data import NonDBHeader
@@ -77,7 +78,29 @@ class XicamMainWindow(QMainWindow):
         menubar.addMenu(file)
         file.addAction("Se&ttings", self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
         file.addAction("E&xit", self.close)
+
+        # Set up help
         help = QMenu("&Help", parent=menubar)
+        # add in links to the documentation (wip) and issue submission
+        documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
+        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new")
+        help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
+        help.addAction("Submit an &Issue", lambda: QDesktopServices.openUrl(submit_issue_link))
+        help.addSeparator()
+        about_title = "About Xi-CAM"
+        about_text = f"""Version: <strong>{versioneer.get_version()}</strong> \
+            <br>\
+            <br>\
+            <small>\
+            Copyright (c) 2016, The Regents of the University of California, \
+            through Lawrence Berkeley National Laboratory \
+            (subject to receipt of any required approvals from the U.S. Dept. of Energy). \
+            All rights reserved.\
+            </small>"""
+        about_box = QMessageBox(QMessageBox.NoIcon, about_title, about_text)
+        about_box.setTextFormat(Qt.RichText)
+        about_box.setWindowModality(Qt.NonModal)
+        help.addAction("&About Xi-CAM", lambda: about_box.show())
         menubar.addMenu(help)
 
         # Initialize layout with first plugin
