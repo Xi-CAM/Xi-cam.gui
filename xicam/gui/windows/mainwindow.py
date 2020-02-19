@@ -85,22 +85,24 @@ class XicamMainWindow(QMainWindow):
         help = QMenu("&Help", parent=menubar)
         documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
         help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
-        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new?labels=bug&template=bug_report.md")
-        help.addAction("Submit an &Issue", lambda: QDesktopServices.openUrl(submit_issue_link))
         slack_link = QUrl("https://nikea.slack.com")
         help.addAction("Chat on &Slack", lambda: QDesktopServices.openUrl(slack_link))
         help.addSeparator()
 
         about_title = "About Xi-CAM"
-        about_text = f"""Version: <strong>{versioneer.get_version()}</strong> \
-            <br>\
-            <br>\
-            <small>\
-            Copyright (c) 2016, The Regents of the University of California, \
+        version_text = f"""Version: <strong>{versioneer.get_version()}</strong>"""
+        copyright_text = f"""<small>Copyright (c) 2016, The Regents of the University of California, \
             through Lawrence Berkeley National Laboratory \
             (subject to receipt of any required approvals from the U.S. Dept. of Energy). \
-            All rights reserved.\
-            </small>"""
+            All rights reserved.</small>"""
+        funding_text = f"""Funding for this research was provided by: \
+            Lawrence Berkeley National Laboratory (grant No. TReXS LDRD to AH); \
+            US Department of Energy (award No. Early Career Award to AH; \
+            contract No. DE-SC0012704; contract No. DE-AC02-06CH11357; \
+            contract No. DE-AC02-76SF00515; contract No. DE-AC02-05CH11231); \
+            Center for Advanced Mathematics in Energy Research Applications; \
+            Light Source Directors Data Solution Task Force Pilot Project."""
+        about_text = version_text + "<br><br>" + funding_text + "<br><hr>" + copyright_text
         about_box = QMessageBox(QMessageBox.NoIcon, about_title, about_text)
         about_box.setTextFormat(Qt.RichText)
         about_box.setWindowModality(Qt.NonModal)
