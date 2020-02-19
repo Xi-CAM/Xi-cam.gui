@@ -85,7 +85,7 @@ class XicamMainWindow(QMainWindow):
         help = QMenu("&Help", parent=menubar)
         documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
         help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
-        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new")
+        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new?labels=bug&template=bug_report.md")
         help.addAction("Submit an &Issue", lambda: QDesktopServices.openUrl(submit_issue_link))
         slack_link = QUrl("https://nikea.slack.com")
         help.addAction("Chat on &Slack", lambda: QDesktopServices.openUrl(slack_link))
