@@ -83,12 +83,14 @@ class XicamMainWindow(QMainWindow):
 
         # Set up help
         help = QMenu("&Help", parent=menubar)
-        # add in links to the documentation (wip) and issue submission
         documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
-        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new")
         help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
+        submit_issue_link = QUrl("https://github.com/synchrotrons/Xi-cam/issues/new")
         help.addAction("Submit an &Issue", lambda: QDesktopServices.openUrl(submit_issue_link))
+        slack_link = QUrl("https://nikea.slack.com")
+        help.addAction("Chat on &Slack", lambda: QDesktopServices.openUrl(slack_link))
         help.addSeparator()
+
         about_title = "About Xi-CAM"
         about_text = f"""Version: <strong>{versioneer.get_version()}</strong> \
             <br>\
@@ -103,6 +105,7 @@ class XicamMainWindow(QMainWindow):
         about_box.setTextFormat(Qt.RichText)
         about_box.setWindowModality(Qt.NonModal)
         help.addAction("&About Xi-CAM", lambda: about_box.show())
+
         menubar.addMenu(help)
 
         # Initialize layout with first plugin
