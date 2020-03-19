@@ -425,7 +425,7 @@ class SearchInputWidget(QWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.search_bar = QLineEdit()
+        self.search_bar = QLineEdit()   #QLineEdit is a widget?
         search_bar_layout = QHBoxLayout()
         search_bar_layout.addWidget(QLabel('Custom Query:'))
         search_bar_layout.addWidget(self.search_bar)
@@ -435,7 +435,7 @@ class SearchInputWidget(QWidget):
         mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
 
         #TODO
-        # add fixed time selectors: "all", "30 days", "2h"
+        ### add fixed time selectors: "all", "30 days", "2h"
 
         self.all_widget = QRadioButton()
         select_all_layout = QHBoxLayout()
@@ -447,10 +447,17 @@ class SearchInputWidget(QWidget):
         select_d30_layout.addWidget(QLabel('30 days'))
         select_d30_layout.addWidget(self.d30_widget)
 
+        self.today_widget = QRadioButton()
+        select_today_layout = QHBoxLayout()
+        select_today_layout.addWidget(QLabel('today'))
+        select_today_layout.addWidget(self.today_widget)
+
         self.hour_widget = QRadioButton()
         select_hour_layout = QHBoxLayout()
         select_hour_layout.addWidget(QLabel('1h'))
         select_hour_layout.addWidget(self.hour_widget)
+
+        ###
 
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
@@ -469,6 +476,7 @@ class SearchInputWidget(QWidget):
         layout = QVBoxLayout()
         layout.addLayout(select_all_layout)
         layout.addLayout(select_d30_layout)
+        layout.addLayout(select_today_layout)
         layout.addLayout(select_hour_layout)
         layout.addLayout(since_layout)
         layout.addLayout(until_layout)
