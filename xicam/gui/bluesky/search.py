@@ -12,6 +12,8 @@ import queue
 import threading
 import time
 
+from qtpy import QtCore, QtGui, QtWidgets
+
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
@@ -419,69 +421,49 @@ class SearchResultsModel(QStandardItemModel):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
 
-class SearchInputWidget(QWidget):
+from .ui_search_input import Ui_SearchInputWidget
+
+class SearchInputWidget(QWidget, Ui_SearchInputWidget):
     """
     Input fields for specifying searches on SearchResultsModel
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.search_bar = QLineEdit()   #QLineEdit is a widget?
-        search_bar_layout = QHBoxLayout()
-        search_bar_layout.addWidget(QLabel('Custom Query:'))
-        search_bar_layout.addWidget(self.search_bar)
-        mongo_query_help_button = QPushButton()
-        mongo_query_help_button.setText('?')
-        search_bar_layout.addWidget(mongo_query_help_button)
-        mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
+        # optional
+        #self._ui = ui
+        self.setupUi(self)
+        # self.search_bar = QLineEdit()   #QLineEdit is a widget?
+        # search_bar_layout = QHBoxLayout()
+        # search_bar_layout.addWidget(QLabel('Custom Query:'))
+        # search_bar_layout.addWidget(self.search_bar)
+        # mongo_query_help_button = QPushButton()
+        # mongo_query_help_button.setText('?')
+        # search_bar_layout.addWidget(mongo_query_help_button)
+        # mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
 
-        #TODO
-        ### add fixed time selectors: "all", "30 days", "2h"
+        # self.since_widget = QDateTimeEdit()
+        # self.since_widget.setCalendarPopup(True)
+        # self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        # since_layout = QHBoxLayout()
+        # since_layout.addWidget(QLabel('Since:'))
+        # since_layout.addWidget(self.since_widget)
 
-        self.all_widget = QRadioButton()
-        select_all_layout = QHBoxLayout()
-        select_all_layout.addWidget(QLabel('all'))
-        select_all_layout.addWidget(self.all_widget)
+        # self.until_widget = QDateTimeEdit()
+        # self.until_widget.setCalendarPopup(True)
+        # self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        # until_layout = QHBoxLayout()
+        # until_layout.addWidget(QLabel('Until:'))
+        # until_layout.addWidget(self.until_widget)
 
-        self.d30_widget = QRadioButton()
-        select_d30_layout = QHBoxLayout()
-        select_d30_layout.addWidget(QLabel('30 days'))
-        select_d30_layout.addWidget(self.d30_widget)
-
-        self.today_widget = QRadioButton()
-        select_today_layout = QHBoxLayout()
-        select_today_layout.addWidget(QLabel('today'))
-        select_today_layout.addWidget(self.today_widget)
-
-        self.hour_widget = QRadioButton()
-        select_hour_layout = QHBoxLayout()
-        select_hour_layout.addWidget(QLabel('1h'))
-        select_hour_layout.addWidget(self.hour_widget)
-
-        ###
-
-        self.since_widget = QDateTimeEdit()
-        self.since_widget.setCalendarPopup(True)
-        self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        since_layout = QHBoxLayout()
-        since_layout.addWidget(QLabel('Since:'))
-        since_layout.addWidget(self.since_widget)
-
-        self.until_widget = QDateTimeEdit()
-        self.until_widget.setCalendarPopup(True)
-        self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        until_layout = QHBoxLayout()
-        until_layout.addWidget(QLabel('Until:'))
-        until_layout.addWidget(self.until_widget)
-
-        layout = QVBoxLayout()
-        layout.addLayout(select_all_layout)
-        layout.addLayout(select_d30_layout)
-        layout.addLayout(select_today_layout)
-        layout.addLayout(select_hour_layout)
-        layout.addLayout(since_layout)
-        layout.addLayout(until_layout)
-        layout.addLayout(search_bar_layout)
-        self.setLayout(layout)
+        # layout = QVBoxLayout()
+        # layout.addLayout(select_all_layout)
+        # layout.addLayout(select_d30_layout)
+        # layout.addLayout(select_today_layout)
+        # layout.addLayout(select_hour_layout)
+        # layout.addLayout(since_layout)
+        # layout.addLayout(until_layout)
+        # layout.addLayout(search_bar_layout)
+        # self.setLayout(layout)
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."
