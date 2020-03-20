@@ -12,7 +12,12 @@ import queue
 import threading
 import time
 
+
 from qtpy import QtCore, QtGui, QtWidgets
+# import everything produced with QtDesigner
+from .ui_search_input import Ui_SearchInputWidget
+from .ui_catalog_selection import Ui_CatalogSelectionWidget
+
 
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
@@ -421,7 +426,6 @@ class SearchResultsModel(QStandardItemModel):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
 
-from .ui_search_input import Ui_SearchInputWidget
 
 class SearchInputWidget(QWidget, Ui_SearchInputWidget):
     """
@@ -439,7 +443,7 @@ class SearchInputWidget(QWidget, Ui_SearchInputWidget):
         # mongo_query_help_button = QPushButton()
         # mongo_query_help_button.setText('?')
         # search_bar_layout.addWidget(mongo_query_help_button)
-        # mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
+        self.mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
 
         # self.since_widget = QDateTimeEdit()
         # self.since_widget.setCalendarPopup(True)
@@ -456,10 +460,6 @@ class SearchInputWidget(QWidget, Ui_SearchInputWidget):
         # until_layout.addWidget(self.until_widget)
 
         # layout = QVBoxLayout()
-        # layout.addLayout(select_all_layout)
-        # layout.addLayout(select_d30_layout)
-        # layout.addLayout(select_today_layout)
-        # layout.addLayout(select_hour_layout)
         # layout.addLayout(since_layout)
         # layout.addLayout(until_layout)
         # layout.addLayout(search_bar_layout)
@@ -490,24 +490,29 @@ Examples:
         msg.exec_()
 
 
-class CatalogList(QComboBox):
-    """
-    List of subcatalogs
-    """
-    ...
+# class CatalogList(QComboBox):
+#     """
+#     List of subcatalogs
+#     """
+#     ...
 
 
-class CatalogSelectionWidget(QWidget):
+class CatalogSelectionWidget(QWidget, Ui_CatalogSelectionWidget):
     """
     Input widget for selecting a subcatalog
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.catalog_list = CatalogList()
-        layout = QHBoxLayout()
-        layout.addWidget(QLabel("Catalog:"))
-        layout.addWidget(self.catalog_list)
-        self.setLayout(layout)
+        # optional
+        #self._ui = ui
+        self.setupUi(self)
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.catalog_list = CatalogList()
+    #     layout = QHBoxLayout()
+    #     layout.addWidget(QLabel("Catalog:"))
+    #     layout.addWidget(self.catalog_list)
+    #     self.setLayout(layout)
 
 
 class SearchResultsWidget(QTableView):
