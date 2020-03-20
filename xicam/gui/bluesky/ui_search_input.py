@@ -37,7 +37,7 @@ class Ui_SearchInputWidget(object):
         self.since_label.setObjectName("since_label")
         self.since_until_layout.addWidget(self.since_label, 0, 0, 1, 1)
         self.since_widget = QtWidgets.QDateTimeEdit(SearchInputWidget)
-        self.since_widget.setMinimumDateTime(QtCore.QDateTime(QtCore.QDate(1752, 9, 14), QtCore.QTime(0, 0, 0)))
+        self.since_widget.setMinimumDateTime(QtCore.QDateTime(QtCore.QDate(2000, 1, 1), QtCore.QTime(0, 0, 0)))
         self.since_widget.setCalendarPopup(True)
         self.since_widget.setObjectName("since_widget")
         self.since_until_layout.addWidget(self.since_widget, 0, 1, 1, 1)
@@ -74,7 +74,9 @@ class Ui_SearchInputWidget(object):
         self.today_widget.setText(_translate("SearchInputWidget", "Today"))
         self.hour_widget.setText(_translate("SearchInputWidget", "Last Hour"))
         self.since_label.setText(_translate("SearchInputWidget", "Since:"))
+        self.since_widget.setDisplayFormat(_translate("SearchInputWidget", "yyyy-MM-dd HH:mm"))
         self.until_label.setText(_translate("SearchInputWidget", "Until:"))
+        self.until_widget.setDisplayFormat(_translate("SearchInputWidget", "yyyy-MM-dd HH:mm"))
         self.custom_query_label.setText(_translate("SearchInputWidget", "Custom Query:"))
         self.mongo_query_help_button.setText(_translate("SearchInputWidget", "?"))
 
