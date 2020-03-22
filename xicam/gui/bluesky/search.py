@@ -17,7 +17,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 # import everything produced with QtDesigner
 from .ui_search_input import Ui_SearchInputWidget
 from .ui_catalog_selection import Ui_CatalogSelectionWidget
-
+from .ui_treeview_test import Ui_Workspace
 
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
@@ -514,8 +514,13 @@ class CatalogSelectionWidget(QWidget, Ui_CatalogSelectionWidget):
     #     layout.addWidget(self.catalog_list)
     #     self.setLayout(layout)
 
+class WorkspaceWidget(QWidget, Ui_Workspace):
+    def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.setupUi(self)
 
-class SearchResultsWidget(QTableView):
+
+class SearchResultsWidget(QTableView): 
     """
     Table of search results
     """
@@ -548,10 +553,12 @@ class SearchWidget(QWidget):
         self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
+        self.workspace_widget = WorkspaceWidget()
         layout = QVBoxLayout()
         layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
+        layout.addWidget(self.workspace_widget)
         self.setLayout(layout)
 
         header = self.search_results_widget.horizontalHeader()
