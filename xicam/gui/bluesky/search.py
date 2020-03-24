@@ -2,7 +2,7 @@
 Experimental Qt-based data browser for bluesky
 """
 import ast
-from datetime import datetime
+from datetime import datetime, date
 import event_model
 import functools
 import itertools
@@ -17,7 +17,6 @@ from qtpy import QtCore, QtGui, QtWidgets
 # import everything produced with QtDesigner
 from .ui_search_input import Ui_SearchInputWidget
 from .ui_catalog_selection import Ui_CatalogSelectionWidget
-from .ui_treeview_test import Ui_Workspace
 
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
@@ -418,13 +417,25 @@ class SearchResultsModel(QStandardItemModel):
             self.valid_custom_query.emit(True)
             self.search_state.search()
 
-    def on_since_time_changed(self, datetime):
-        self.since = datetime.toSecsSinceEpoch()
+    def on_since_time_changed(self, qdatetime):
+        self.since = qdatetime.toSecsSinceEpoch()
         self.search_state.search()
 
-    def on_until_time_changed(self, datetime):
-        self.until = datetime.toSecsSinceEpoch()
+    def on_until_time_changed(self, qdatetime):
+        self.until = qdatetime.toSecsSinceEpoch()
         self.search_state.search()
+
+    def on_select_range(self, set_range):
+        self.until = time.time()
+        self.since = self.until-set_range
+        self.search_state.search()
+
+    def on_select_all(self):
+        self.until = None
+        self.since = None
+        self.search_state.search()
+
+
 
 
 class SearchInputWidget(QWidget, Ui_SearchInputWidget):
@@ -433,37 +444,8 @@ class SearchInputWidget(QWidget, Ui_SearchInputWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # optional
-        #self._ui = ui
         self.setupUi(self)
-        # self.search_bar = QLineEdit()   #QLineEdit is a widget?
-        # search_bar_layout = QHBoxLayout()
-        # search_bar_layout.addWidget(QLabel('Custom Query:'))
-        # search_bar_layout.addWidget(self.search_bar)
-        # mongo_query_help_button = QPushButton()
-        # mongo_query_help_button.setText('?')
-        # search_bar_layout.addWidget(mongo_query_help_button)
         self.mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
-
-        # self.since_widget = QDateTimeEdit()
-        # self.since_widget.setCalendarPopup(True)
-        # self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        # since_layout = QHBoxLayout()
-        # since_layout.addWidget(QLabel('Since:'))
-        # since_layout.addWidget(self.since_widget)
-
-        # self.until_widget = QDateTimeEdit()
-        # self.until_widget.setCalendarPopup(True)
-        # self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        # until_layout = QHBoxLayout()
-        # until_layout.addWidget(QLabel('Until:'))
-        # until_layout.addWidget(self.until_widget)
-
-        # layout = QVBoxLayout()
-        # layout.addLayout(since_layout)
-        # layout.addLayout(until_layout)
-        # layout.addLayout(search_bar_layout)
-        # self.setLayout(layout)
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."
@@ -490,29 +472,14 @@ Examples:
         msg.exec_()
 
 
-# class CatalogList(QComboBox):
-#     """
-#     List of subcatalogs
-#     """
-#     ...
-
-
 class CatalogSelectionWidget(QWidget, Ui_CatalogSelectionWidget):
     """
     Input widget for selecting a subcatalog
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # optional
-        #self._ui = ui
         self.setupUi(self)
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     self.catalog_list = CatalogList()
-    #     layout = QHBoxLayout()
-    #     layout.addWidget(QLabel("Catalog:"))
-    #     layout.addWidget(self.catalog_list)
-    #     self.setLayout(layout)
+
 
 
 
@@ -549,12 +516,10 @@ class SearchWidget(QWidget):
         self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
-        self.workspace_widget = WorkspaceWidget()
         layout = QVBoxLayout()
         layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
-        layout.addWidget(self.workspace_widget)
         self.setLayout(layout)
 
         header = self.search_results_widget.horizontalHeader()
