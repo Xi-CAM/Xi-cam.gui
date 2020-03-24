@@ -514,10 +514,6 @@ class CatalogSelectionWidget(QWidget, Ui_CatalogSelectionWidget):
     #     layout.addWidget(self.catalog_list)
     #     self.setLayout(layout)
 
-class WorkspaceWidget(QWidget, Ui_Workspace):
-    def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.setupUi(self)
 
 
 class SearchResultsWidget(QTableView): 
