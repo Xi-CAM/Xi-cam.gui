@@ -9,6 +9,7 @@ import time
 from .search import SearchWidget, SearchState
 from xicam.gui.bluesky.summary import SummaryWidget
 
+
 from qtpy.QtCore import QDateTime, Qt
 from qtpy.QtWidgets import (
     QWidget,
@@ -24,7 +25,6 @@ class CentralWidget(QWidget):
                  catalog, menuBar,
                  zmq_address=None, **kwargs):
         super().__init__(*args, **kwargs)
-
         # Define models.
         search_state = SearchState(
             catalog=catalog)
@@ -103,7 +103,7 @@ class CentralWidget(QWidget):
 
         self.search_widget.search_input_widget.search_bar.textChanged.connect(
             search_state.search_results_model.on_search_text_changed)
-            
+
         self.search_widget.search_results_widget.setModel(
             search_state.search_results_model)
         self.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
