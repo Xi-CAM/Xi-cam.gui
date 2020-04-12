@@ -28,6 +28,7 @@ from qtpy.QtWidgets import (
     QDateTimeEdit,
     QHeaderView,
     QHBoxLayout,
+    QGridLayout,
     QMessageBox,
     QLabel,
     QLineEdit,
@@ -438,14 +439,53 @@ class SearchResultsModel(QStandardItemModel):
 
 
 
-class SearchInputWidget(QWidget, Ui_SearchInputWidget):
+class SearchInputWidget(QWidget):
     """
     Input fields for specifying searches on SearchResultsModel
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setupUi(self)
+        # 4 Radiobuttons to quickly select default time period
+        self.all_widget = QRadioButton("All")
+        self.days_widget = QRadioButton("30 Days")
+        self.today_widget = QRadioButton("Today")
+        self.hour_widget = QRadioButton("Last Hour")
+        default_period_layout = QGridLayout()
+        default_period_layout.addWidget(self.all_widget, 0, 0, 1, 1)
+        default_period_layout.addWidget(self.days_widget, 0, 1, 1, 1)
+        default_period_layout.addWidget(self.today_widget, 1, 0, 1, 1)
+        default_period_layout.addWidget(self.hour_widget, 1, 1, 1, 1)
+        # Since and Until time selector
+        self.since_label = QLabel("Since:")
+        self.since_widget = QDateTimeEdit()
+        self.since_widget.setCalendarPopup(True)
+        self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        self.until_label = QLabel("Until:")
+        self.until_widget = QDateTimeEdit()
+        self.until_widget.setCalendarPopup(True)
+        self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        since_until_layout = QGridLayout()
+        since_until_layout.addWidget(self.since_label, 0, 0, 1, 1)
+        since_until_layout.addWidget(self.since_widget, 0, 1, 1, 1)
+        since_until_layout.addWidget(self.until_label, 1, 0, 1, 1)
+        since_until_layout.addWidget(self.until_widget, 1, 1, 1, 1)
+        # Custom Query
+        self.custom_query_label = QLabel("Custom Query:")
+        self.search_bar = QLineEdit()
+        self.mongo_query_help_button = QPushButton("?")
         self.mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
+        search_bar_layout = QHBoxLayout()
+        search_bar_layout.addWidget(self.custom_query_label)
+        search_bar_layout.addWidget(self.search_bar)
+        search_bar_layout.addWidget(self.mongo_query_help_button)
+        # add individual layouts to search_input_layout
+        search_input_layout = QVBoxLayout()
+        search_input_layout.addLayout(default_period_layout)
+        search_input_layout.addLayout(since_until_layout)
+        search_input_layout.addLayout(search_bar_layout)
+
+        self.setLayout(search_input_layout)
+
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."
@@ -472,13 +512,18 @@ Examples:
         msg.exec_()
 
 
-class CatalogSelectionWidget(QWidget, Ui_CatalogSelectionWidget):
+class CatalogSelectionWidget(QWidget):
     """
     Input widget for selecting a subcatalog
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setupUi(self)
+        self.catalog = QLabel("Select Catalog:")
+        self.catalog_list = QComboBox()
+        horizontal_layout = QHBoxLayout()
+        horizontal_layout.addWidget(self.catalog)
+        horizontal_layout.addWidget(self.catalog_list)
+        self.setLayout(horizontal_layout)
 
 
 
