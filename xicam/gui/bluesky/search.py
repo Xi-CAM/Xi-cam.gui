@@ -13,11 +13,6 @@ import threading
 import time
 
 
-from qtpy import QtCore, QtGui, QtWidgets
-# import everything produced with QtDesigner
-from .ui_search_input import Ui_SearchInputWidget
-from .ui_catalog_selection import Ui_CatalogSelectionWidget
-
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
