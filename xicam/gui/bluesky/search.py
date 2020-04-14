@@ -14,7 +14,7 @@ import time
 
 
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
-from qtpy.QtGui import QStandardItemModel, QStandardItem
+from qtpy.QtGui import QStandardItemModel, QStandardItem, QButtonGroup
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QPushButton,
@@ -433,7 +433,6 @@ class SearchResultsModel(QStandardItemModel):
 
 
 
-
 class SearchInputWidget(QWidget):
     """
     Input fields for specifying searches on SearchResultsModel
@@ -445,6 +444,11 @@ class SearchInputWidget(QWidget):
         self.days_widget = QRadioButton("30 Days")
         self.today_widget = QRadioButton("Today")
         self.hour_widget = QRadioButton("Last Hour")
+        self.radio_button_group = QButtonGroup()
+        self.radio_button_group.addButton(self.all_widget)
+        self.radio_button_group.addButton(self.days_widget)
+        self.radio_button_group.addButton(self.today_widget)
+        self.radio_button_group.addButton(self.hour_widget)
         default_period_layout = QGridLayout()
         default_period_layout.addWidget(self.all_widget, 0, 0, 1, 1)
         default_period_layout.addWidget(self.days_widget, 0, 1, 1, 1)
@@ -455,10 +459,12 @@ class SearchInputWidget(QWidget):
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
         self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        self.since_widget.dateTimeChanged.connect(self.uncheck_radiobuttons)
         self.until_label = QLabel("Until:")
         self.until_widget = QDateTimeEdit()
         self.until_widget.setCalendarPopup(True)
         self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        self.until_widget.dateTimeChanged.connect(self.uncheck_radiobuttons)
         since_until_layout = QGridLayout()
         since_until_layout.addWidget(self.since_label, 0, 0, 1, 1)
         since_until_layout.addWidget(self.since_widget, 0, 1, 1, 1)
@@ -481,6 +487,13 @@ class SearchInputWidget(QWidget):
 
         self.setLayout(search_input_layout)
 
+    def uncheck_radiobuttons(self):
+        self.radio_button_group.setExclusive(False)        
+        self.all_widget.setChecked(False)
+        self.days_widget.setChecked(False)
+        self.today_widget.setChecked(False)
+        self.hour_widget.setChecked(False)
+        self.radio_button_group.setExclusive(True)
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."

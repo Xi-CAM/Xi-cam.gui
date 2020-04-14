@@ -31,6 +31,7 @@ class CentralWidget(QWidget):
         self.search_model = search_state.search_results_model
         # Define widgets.
         self.search_widget = SearchWidget()
+        # self.search_input_widget = SearchInputWidget()
         self.summary_widget = SummaryWidget()
 
         left_pane = QSplitter(Qt.Vertical)
@@ -57,18 +58,21 @@ class CentralWidget(QWidget):
         def set_timerange(timerange):
             search_state.search_results_model.on_select_range(timerange)
             self.search_widget.search_input_widget.since_widget.setDateTime(
-            QDateTime.fromSecsSinceEpoch(now - timerange))
+                              QDateTime.fromSecsSinceEpoch(now - timerange))
             self.search_widget.search_input_widget.until_widget.setDateTime(
-            QDateTime.fromSecsSinceEpoch(now))
+                                          QDateTime.fromSecsSinceEpoch(now))
 
         def on_select_today():
             set_timerange(TODAY)
+            self.search_widget.search_input_widget.today_widget.setChecked(True)
 
         def on_select_lasthour():
             set_timerange(ONE_HOUR)
+            self.search_widget.search_input_widget.hour_widget.setChecked(True)
 
         def on_select_30days():
             set_timerange(ONE_MONTH)
+            self.search_widget.search_input_widget.days_widget.setChecked(True)
 
         def on_select_all():
             search_state.search_results_model.on_select_all()
@@ -76,6 +80,7 @@ class CentralWidget(QWidget):
             QDateTime.fromSecsSinceEpoch(0))
             self.search_widget.search_input_widget.until_widget.setDateTime(
             QDateTime.fromSecsSinceEpoch(now))
+            self.search_widget.search_input_widget.all_widget.setChecked(True)
 
         # connect QRadioButtons and change date dropdowns (since/until widgets) accordingly
         self.search_widget.search_input_widget.today_widget.clicked.connect(
