@@ -17,7 +17,7 @@ class SummaryWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_label = QLabel()
-        self.open_individually_button = QPushButton('Open')
+        self.open_individually_button = QPushButton('Open Catalog')
         self.open_individually_button.setEnabled(False)
         self.open_individually_button.clicked.connect(self._open_individually)
         self.copy_uid_button = QPushButton('Copy UID to Clipboard')

@@ -2,7 +2,7 @@
 Experimental Qt-based data browser for bluesky
 """
 import ast
-from datetime import datetime
+from datetime import datetime, date
 import event_model
 import functools
 import itertools
@@ -12,15 +12,18 @@ import queue
 import threading
 import time
 
+
 from qtpy.QtCore import Qt, Signal, QThread, QSettings
-from qtpy.QtGui import QStandardItemModel, QStandardItem
+from qtpy.QtGui import QStandardItemModel, QStandardItem, QButtonGroup
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QPushButton,
+    QRadioButton,
     QComboBox,
     QDateTimeEdit,
     QHeaderView,
     QHBoxLayout,
+    QGridLayout,
     QMessageBox,
     QLabel,
     QLineEdit,
@@ -429,13 +432,25 @@ class SearchResultsModel(QStandardItemModel):
             self.valid_custom_query.emit(True)
             self.search_state.search()
 
-    def on_since_time_changed(self, datetime):
-        self.since = datetime.toSecsSinceEpoch()
+    def on_since_time_changed(self, qdatetime):
+        self.since = qdatetime.toSecsSinceEpoch()
         self.search_state.search()
 
-    def on_until_time_changed(self, datetime):
-        self.until = datetime.toSecsSinceEpoch()
+    def on_until_time_changed(self, qdatetime):
+        self.until = qdatetime.toSecsSinceEpoch()
         self.search_state.search()
+
+    def on_select_range(self, set_range):
+        self.until = time.time()
+        self.since = self.until-set_range
+        self.search_state.search()
+
+    def on_select_all(self):
+        self.until = None
+        self.since = None
+        self.search_state.search()
+
+
 
 class SearchInputWidget(QWidget):
     """
@@ -443,34 +458,61 @@ class SearchInputWidget(QWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.search_bar = QLineEdit()
-        search_bar_layout = QHBoxLayout()
-        search_bar_layout.addWidget(QLabel('Custom Query:'))
-        search_bar_layout.addWidget(self.search_bar)
-        mongo_query_help_button = QPushButton()
-        mongo_query_help_button.setText('?')
-        search_bar_layout.addWidget(mongo_query_help_button)
-        mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
-
+        # 4 Radiobuttons to quickly select default time period
+        self.all_widget = QRadioButton("All")
+        self.days_widget = QRadioButton("30 Days")
+        self.today_widget = QRadioButton("Today")
+        self.hour_widget = QRadioButton("Last Hour")
+        self.radio_button_group = QButtonGroup()
+        self.radio_button_group.addButton(self.all_widget)
+        self.radio_button_group.addButton(self.days_widget)
+        self.radio_button_group.addButton(self.today_widget)
+        self.radio_button_group.addButton(self.hour_widget)
+        default_period_layout = QGridLayout()
+        default_period_layout.addWidget(self.all_widget, 0, 0, 1, 1)
+        default_period_layout.addWidget(self.days_widget, 0, 1, 1, 1)
+        default_period_layout.addWidget(self.today_widget, 1, 0, 1, 1)
+        default_period_layout.addWidget(self.hour_widget, 1, 1, 1, 1)
+        # Since and Until time selector
+        self.since_label = QLabel("Since:")
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
         self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        since_layout = QHBoxLayout()
-        since_layout.addWidget(QLabel('Since:'))
-        since_layout.addWidget(self.since_widget)
-
+        self.since_widget.dateTimeChanged.connect(self.uncheck_radiobuttons)
+        self.until_label = QLabel("Until:")
         self.until_widget = QDateTimeEdit()
         self.until_widget.setCalendarPopup(True)
         self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
-        until_layout = QHBoxLayout()
-        until_layout.addWidget(QLabel('Until:'))
-        until_layout.addWidget(self.until_widget)
+        self.until_widget.dateTimeChanged.connect(self.uncheck_radiobuttons)
+        since_until_layout = QGridLayout()
+        since_until_layout.addWidget(self.since_label, 0, 0, 1, 1)
+        since_until_layout.addWidget(self.since_widget, 0, 1, 1, 1)
+        since_until_layout.addWidget(self.until_label, 1, 0, 1, 1)
+        since_until_layout.addWidget(self.until_widget, 1, 1, 1, 1)
+        # Custom Query
+        self.custom_query_label = QLabel("Custom Query:")
+        self.search_bar = QLineEdit()
+        self.mongo_query_help_button = QPushButton("?")
+        self.mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
+        search_bar_layout = QHBoxLayout()
+        search_bar_layout.addWidget(self.custom_query_label)
+        search_bar_layout.addWidget(self.search_bar)
+        search_bar_layout.addWidget(self.mongo_query_help_button)
+        # add individual layouts to search_input_layout
+        search_input_layout = QVBoxLayout()
+        search_input_layout.addLayout(default_period_layout)
+        search_input_layout.addLayout(since_until_layout)
+        search_input_layout.addLayout(search_bar_layout)
 
-        layout = QVBoxLayout()
-        layout.addLayout(since_layout)
-        layout.addLayout(until_layout)
-        layout.addLayout(search_bar_layout)
-        self.setLayout(layout)
+        self.setLayout(search_input_layout)
+
+    def uncheck_radiobuttons(self):
+        self.radio_button_group.setExclusive(False)        
+        self.all_widget.setChecked(False)
+        self.days_widget.setChecked(False)
+        self.today_widget.setChecked(False)
+        self.hour_widget.setChecked(False)
+        self.radio_button_group.setExclusive(True)
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."
@@ -497,27 +539,23 @@ Examples:
         msg.exec_()
 
 
-class CatalogList(QComboBox):
-    """
-    List of subcatalogs
-    """
-    ...
-
-
 class CatalogSelectionWidget(QWidget):
     """
     Input widget for selecting a subcatalog
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.catalog_list = CatalogList()
-        layout = QHBoxLayout()
-        layout.addWidget(QLabel("Catalog:"))
-        layout.addWidget(self.catalog_list)
-        self.setLayout(layout)
+        self.catalog = QLabel("Select Catalog:")
+        self.catalog_list = QComboBox()
+        horizontal_layout = QHBoxLayout()
+        horizontal_layout.addWidget(self.catalog)
+        horizontal_layout.addWidget(self.catalog_list)
+        self.setLayout(horizontal_layout)
 
 
-class SearchResultsWidget(QTableView):
+
+
+class SearchResultsWidget(QTableView): 
     """
     Table of search results
     """
