@@ -47,9 +47,10 @@ class WorkflowEditor(QSplitter):
         operation.filled_values[param_name] = value
 
     def setParameters(self, operation: OperationPlugin):
-        parameters = operation.as_parameter()
-        group = GroupParameter(name='blah', children=parameters)
-        for child, parameter in zip(group.children(), parameters):
+        parameter = operation.as_parameter()
+        group = GroupParameter(name='Selected Operation', children=parameter)
+        operation.wireup_parameter(group)
+        for child, parameter in zip(group.children(), parameter):
             # wireup signals to update the workflow
             if parameter.get('fixable'):
                 child.sigFixToggled.connect(partial(self.setFixed, operation, child.name))
@@ -155,9 +156,7 @@ class LinearWorkflowView(QTableView):
     def selectionChanged(self, selected=None, deselected=None):
         if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
             operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]  # type: OperationPlugin
-            parameter = Parameter(name='Selected Operation', type='group', children=operation.as_parameter())
-            operation.wireup_parameter(parameter)
-            self.sigShowParameter.emit(parameter)
+            self.sigShowParameter.emit(operation)
         else:
             self.sigShowParameter.emit(None)
         for child in self.children():
