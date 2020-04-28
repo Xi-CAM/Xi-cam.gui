@@ -1,7 +1,8 @@
 import pickle
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
 from qtpy.QtGui import QIcon, QPixmap
-from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
+from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
+    QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
 from xicam.core.execution.workflow import Workflow
 from xicam.plugins import OperationPlugin
 from pyqtgraph.parametertree import ParameterTree, Parameter
@@ -10,6 +11,9 @@ from xicam.gui.static import path
 from xicam.plugins import manager as pluginmanager
 from functools import partial
 from typing import List
+from xicam.plugins import manager as pluginmanager, OperationPlugin
+from functools import partial, lru_cache
+
 
 # WorkflowEditor
 #  WorkflowOperationEditor
@@ -98,8 +102,8 @@ class WorkflowWidget(QWidget):
     def populateFunctionMenu(self):
         self.functionmenu.clear()
         sortingDict = {}
-        for plugin in pluginmanager.getPluginsOfCategory("OperationPlugin"):
-            typeOfOperationPlugin = plugin.plugin_object.getCategory()
+        for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
+            typeOfOperationPlugin = plugin.getCategory()
             if not typeOfOperationPlugin in sortingDict.keys():
                 sortingDict[typeOfOperationPlugin] = []
             sortingDict[typeOfOperationPlugin].append(plugin)
@@ -108,18 +112,17 @@ class WorkflowWidget(QWidget):
             self.functionmenu.addAction(key)
             self.functionmenu.addSeparator()
             for plugin in sortingDict[key]:
-                self.functionmenu.addAction(plugin.name,
-                                            partial(self.add_operation, plugin.plugin_object, autoconnectall=True))
+                self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
 
-    def addOperation(self, operation, autoconnectall=True):
-        self.view.model().workflow.add_operation(operation(), autoconnectall)
+    def addOperation(self, operation: OperationPlugin, autoconnectall=True):
+        self.view.model().workflow.addOperation(operation(), autoconnectall)
         print("selected new row:", self.view.model().rowCount() - 1)
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
     def deleteOperation(self):
         for index in self.view.selectedIndexes():
             operation = self.view.model().workflow.operations[index.row()]
-            self.view.model().workflow.removeOperation(operation)
+            self.view.model().workflow.remove_operation(operation)
 
 
 class LinearWorkflowView(QTableView):
@@ -127,6 +130,7 @@ class LinearWorkflowView(QTableView):
 
     def __init__(self, workflowmodel=None, *args, **kwargs):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
+
         self.setItemDelegateForColumn(0, DisableDelegate(self))
         self.setItemDelegateForColumn(1, HintsDelegate(self))
 
@@ -150,8 +154,10 @@ class LinearWorkflowView(QTableView):
 
     def selectionChanged(self, selected=None, deselected=None):
         if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
-            operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]
-            self.sigShowParameter.emit(operation)
+            operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]  # type: OperationPlugin
+            parameter = Parameter(name='Selected Operation', type='group', children=operation.as_parameter())
+            operation.wireup_parameter(parameter)
+            self.sigShowParameter.emit(parameter)
         else:
             self.sigShowParameter.emit(None)
         for child in self.children():
@@ -163,7 +169,7 @@ class LinearWorkflowView(QTableView):
             widget = self.indexWidget(self.model().index(row, 1))
             if hasattr(widget, "setSelectedVisibility"):
                 widget.setSelectedVisibility(row in selectedrows)
-        self.resizeRowsToContents()
+        # self.resizeRowsToContents()
 
 
 class WorkflowModel(QAbstractTableModel):
@@ -186,7 +192,7 @@ class WorkflowModel(QAbstractTableModel):
         operation = self.workflow.operations[srcindex]
         self.workflow.remove_operation(operation)
         self.workflow.insert_operation(parent.row(), operation)
-        self.workflow.autoConnectAll()
+        self.workflow.auto_connect_all()
         return True
 
     def supportedDropActions(self):
@@ -210,11 +216,7 @@ class WorkflowModel(QAbstractTableModel):
         elif role != Qt.DisplayRole:
             return None
         elif index.column() == 0:
-            def toggle_disabled(*args, **kwargs):
-                self.workflow.toggle_disabled(operation, *args, **kwargs)
-                self.workflow.auto_connect_all()
-
-            return toggle_disabled
+            return partial(self.workflow.toggle_disabled, operation)
         elif index.column() == 1:
             # return getattr(process, 'name', process.__class__.__name__)
             return None
@@ -248,7 +250,7 @@ class HintsWidget(QWidget):
         enabledhints = [hint for hint in self.hints if hint.enabled]
 
         for i, hint in enumerate(enabledhints):
-            enablebutton = QPushButton(icon=enableicon())
+            enablebutton = QPushButton(icon=mk_enableicon())
             sp = QSizePolicy()
             sp.setWidthForHeight(True)
             enablebutton.setSizePolicy(sp)
@@ -258,14 +260,22 @@ class HintsWidget(QWidget):
             self.layout().addWidget(enablebutton, i + 1, 0, 1, 1)
             self.layout().addWidget(label)
 
+        self.name = operation.name
+
+        print('size1:', operation.name, self.sizeHint())
+
     def setSelectedVisibility(self, selected):
         for row in range(1, self.layout().rowCount()):
             self.layout().itemAtPosition(row, 0).widget().setVisible(selected)
             self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
+        print('size2:', self.name, self.sizeHint())
+
+    def sizeHint(self):
+        return QSize(30, 30)
 
 
 class DeleteDelegate(QItemDelegate):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super(DeleteDelegate, self).__init__(parent)
         self._parent = parent
 
@@ -284,27 +294,34 @@ class DeleteDelegate(QItemDelegate):
 
 
 class DisableDelegate(QItemDelegate):
+    class DelegateClass(QToolButton):
+        def __init__(self, parent=None):
+            super(DisableDelegate.DelegateClass, self).__init__(parent=parent)
+            self.setText("i")
+            self.setAutoRaise(True)
+
+            self.setIcon(mk_enableicon())
+            self.setCheckable(True)
+            sp = QSizePolicy()
+            sp.setWidthForHeight(True)
+            self.setSizePolicy(sp)
+
     def __init__(self, parent):
         super(DisableDelegate, self).__init__(parent)
         self._parent = parent
 
     def paint(self, painter, option, index):
         if not self._parent.indexWidget(index):
-            button = QToolButton(self.parent())
-            button.setText("i")
-            button.setAutoRaise(True)
-
-            button.setIcon(enableicon())
-            button.setCheckable(True)
-            sp = QSizePolicy()
-            sp.setWidthForHeight(True)
-            button.setSizePolicy(sp)
+            button = self.DelegateClass(self.parent())
             button.clicked.connect(index.data())
-
             self._parent.setIndexWidget(index, button)
 
+    def sizeHint(self, QStyleOptionViewItem, QModelIndex):
+        return QSize(30, 30)
 
-def enableicon():
+
+@lru_cache
+def mk_enableicon():
     enableicon = QIcon()
     enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
     enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
