@@ -2,20 +2,22 @@ from functools import partial
 
 from intake.catalog import Catalog
 from intake.catalog.entry import CatalogEntry
-
-from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
-from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
-from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
-from xicam.plugins.guiplugin import PanelState
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings, QUrl
+from qtpy.QtGui import QDesktopServices, QIcon, QPixmap, QKeySequence, QFont
+from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, \
+    QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox, QMessageBox
+import versioneer
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import EntryPointPluginInfo
+from xicam.plugins import PluginType
+from xicam.plugins.guiplugin import PanelState
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
-from xicam.core import msg
+from xicam.core import msg, threads
 from xicam.core.data import NonDBHeader
-from ..widgets import defaultstage
-from .settings import ConfigDialog
+from xicam.gui.settings.appearance import AppearanceSettingsPlugin
+from ..widgets import get_default_stage
+from .settings import ConfigDialog, ConfigRestorer
 from ..static import path
 
 
@@ -49,13 +51,13 @@ class XicamMainWindow(QMainWindow):
 
         # Setup appearance
         self.setWindowTitle("Xi-cam")
+        self.load_style()
+
+        # Attach an object to restore config when loaded
+        self._config_restorer = ConfigRestorer()
 
         # Load plugins
-        pluginmanager.collectPlugins()
-
-        # Restore Settings
-        self._configdialog = ConfigDialog()
-        self._configdialog.restore()
+        pluginmanager.collect_plugins()
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
@@ -78,7 +80,34 @@ class XicamMainWindow(QMainWindow):
         menubar.addMenu(file)
         file.addAction("Se&ttings", self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
         file.addAction("E&xit", self.close)
+
+        # Set up help
         help = QMenu("&Help", parent=menubar)
+        documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
+        help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
+        slack_link = QUrl("https://nikea.slack.com")
+        help.addAction("Chat on &Slack", lambda: QDesktopServices.openUrl(slack_link))
+        help.addSeparator()
+
+        about_title = "About Xi-CAM"
+        version_text = f"""Version: <strong>{versioneer.get_version()}</strong>"""
+        copyright_text = f"""<small>Copyright (c) 2016, The Regents of the University of California, \
+            through Lawrence Berkeley National Laboratory \
+            (subject to receipt of any required approvals from the U.S. Dept. of Energy). \
+            All rights reserved.</small>"""
+        funding_text = f"""Funding for this research was provided by: \
+            Lawrence Berkeley National Laboratory (grant No. TReXS LDRD to AH); \
+            US Department of Energy (award No. Early Career Award to AH; \
+            contract No. DE-SC0012704; contract No. DE-AC02-06CH11357; \
+            contract No. DE-AC02-76SF00515; contract No. DE-AC02-05CH11231); \
+            Center for Advanced Mathematics in Energy Research Applications; \
+            Light Source Directors Data Solution Task Force Pilot Project."""
+        about_text = version_text + "<br><br>" + funding_text + "<br><hr>" + copyright_text
+        about_box = QMessageBox(QMessageBox.NoIcon, about_title, about_text)
+        about_box.setTextFormat(Qt.RichText)
+        about_box.setWindowModality(Qt.NonModal)
+        help.addAction("&About Xi-CAM", lambda: about_box.show())
+
         menubar.addMenu(help)
 
         # Initialize layout with first plugin
@@ -109,9 +138,9 @@ class XicamMainWindow(QMainWindow):
 
         self.readSettings()
         # Wireup default widgets
-        defaultstage["left"].sigOpen.connect(self.open)
-        defaultstage["left"].sigOpen.connect(print)
-        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview)
+        get_default_stage()["left"].sigOpen.connect(self.open)
+        get_default_stage()["left"].sigOpen.connect(print)
+        get_default_stage()["left"].sigPreview.connect(get_default_stage()["lefttop"].preview)
 
     def open(self, header):
         if self.currentGUIPlugin is None:
@@ -127,7 +156,11 @@ class XicamMainWindow(QMainWindow):
             raise TypeError(f"Cannot open {header}.")
 
     def showSettings(self):
-        self._configdialog.show()
+        ConfigDialog().show()
+
+    def load_style(self):
+        # Load styles explicitly
+        AppearanceSettingsPlugin().apply()
 
     def setStage(self, stage):
         """
@@ -193,7 +226,7 @@ class XicamMainWindow(QMainWindow):
         if self.currentGUIPlugin:
             stage = self.currentGUIPlugin.stage
         else:
-            stage = defaultstage
+            stage = get_default_stage()
 
         # Set center contents
         self.centralWidget().addWidget(stage.centerwidget)
@@ -207,15 +240,15 @@ class XicamMainWindow(QMainWindow):
     def populate_hidden(self, stage, position):
         getattr(self, position + "widget").setHidden(
             (stage[position] == PanelState.Disabled)
-            or (stage[position] == PanelState.Defaulted and defaultstage[position] == PanelState.Defaulted)
+            or (stage[position] == PanelState.Defaulted and get_default_stage()[position] == PanelState.Defaulted)
         )
 
     def populate_position(self, stage, position: str):
         if isinstance(stage[position], QWidget):
             getattr(self, position + "widget").setWidget(stage[position])
         elif stage[position] == PanelState.Defaulted:
-            if not defaultstage[position] == PanelState.Defaulted:
-                getattr(self, position + "widget").setWidget(defaultstage[position])
+            if not get_default_stage()[position] == PanelState.Defaulted:
+                getattr(self, position + "widget").setWidget(get_default_stage()[position])
         elif isinstance(stage[position], type):
             raise TypeError(
                 f"A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}"
@@ -272,13 +305,17 @@ class pluginModeWidget(QToolBar):
         # Build children
         self.pluginsChanged()
 
+    def pluginsChanged(self):
+        self._build_nodes()
+        self.showNode()
+
     def _build_nodes(self):
         self._nodes = []
-        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
+        for plugin in pluginmanager.get_plugins_of_type("GUIPlugin") + pluginmanager.get_plugins_of_type("EZPlugin"):
 
-            node = Node(plugin, plugin.plugin_object.name)
+            node = Node(plugin, plugin.name)
 
-            for name, stage in plugin.plugin_object.stages.items():
+            for name, stage in plugin.stages.items():
                 node.children.append(self._build_subnodes(name, stage, parent=node))
 
             self._nodes.append(node)
@@ -293,11 +330,6 @@ class pluginModeWidget(QToolBar):
 
         return node
 
-
-    def pluginsChanged(self):
-        self._build_nodes()
-        self.showNode()
-
     def showNode(self, node=None, direction=None):
         if node is None:  # toplevel
             plugin_nodes = [node for node in self._nodes if node.parent is None]
@@ -311,12 +343,12 @@ class pluginModeWidget(QToolBar):
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
 
-        elif isinstance(node.object, (PluginInfo.PluginInfo, EntryPointPluginInfo)):
+        elif isinstance(node.object, (PluginType,)):
             nodes = node.children
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
-            self.sigSetGUIPlugin.emit(node.object.plugin_object)
-            self.setStage(node.object.plugin_object.stage)
+            self.sigSetGUIPlugin.emit(node.object)
+            self.setStage(node.object.stage)
 
         # elif isinstance(node.object, dict): # midlevel
         #     self._showNodes(node.object.keys(), node.object.values(), direction)
@@ -325,7 +357,7 @@ class pluginModeWidget(QToolBar):
             parent_node = node.parent
             while parent_node.parent is not None:
                 parent_node = parent_node.parent
-            self.sigSetGUIPlugin.emit(parent_node.object.plugin_object)
+            self.sigSetGUIPlugin.emit(parent_node.object)
             self.setStage(node.object)
 
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
@@ -385,40 +417,9 @@ class pluginModeWidget(QToolBar):
             a.setEasingCurve(QEasingCurve.OutBack)
             a.start(QPropertyAnimation.DeleteWhenStopped)
 
-    # def showStages(self, plugin, *, parent_stage=None):
-    #     if not parent_stage:
-    #         self.sigSetGUIPlugin.emit(plugin)
-    #     if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
-    #         if parent_stage:
-    #             names = self.parent().currentGUIPlugin.plugin_object.stages[parent_stage].keys()
-    #         else:
-    #             names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
-    #
-    #         parent = self.parent().currentGUIPlugin.plugin_object.name
-    #         if parent_stage:
-    #             parent += f' > {parent_stage}'
-    #
-    #         self.fadeOut(
-    #             callback=partial(
-    #                 self.mkButtons,
-    #                 names=names,
-    #                 callback=self.setStage,#self.sigSetStage.emit,
-    #                 parent=parent,
-    #             )
-    #         )
 
     def setStage(self, stage):
         self.sigSetStage.emit(stage)
-        # if isinstance(list(self.parent().currentGUIPlugin.plugin_object.stages.values())[i], dict):
-        #     self.showStages(self.parent().currentGUIPlugin.plugin_object, parent_stage=list(self.parent().currentGUIPlugin.plugin_object.stages.keys())[i])
-
-    # def showGUIPlugins(self, distance=20):
-    #     plugins = pluginmanager.getPluginsOfCategory("GUIPlugin")
-    #     # TODO: test deactivated plugins
-    #     names = [
-    #         plugin.plugin_object.name for plugin in plugins if getattr(plugin, "is_activated", True) or True
-    #     ]  # TODO: add plugin deactivation
-    #     self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
 
     def mkButtons(self, nodes):
         # Remove+delete previous children

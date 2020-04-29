@@ -47,6 +47,9 @@ class CentralWidget(QWidget):
         def show_double_clicked_entry(index):
             search_state.search_results_model.emit_open_entries(None, [index])
 
+        def preview_clicked_entry(index):
+            search_state.search_results_model.emit_preview_entry(None, index)
+
         # Set models, connect signals, and set initial values.
         now = time.time()
         ONE_WEEK = 60 * 60 * 24 * 7
@@ -70,12 +73,13 @@ class CentralWidget(QWidget):
             search_state.search_results_model.emit_selected_result)
         self.search_widget.search_results_widget.doubleClicked.connect(
             show_double_clicked_entry)
+        self.search_widget.search_results_widget.clicked.connect(
+            preview_clicked_entry)
         search_state.search_results_model.selected_result.connect(
             self.summary_widget.set_entries)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
+        search_state.sig_update_header.connect(
+            self.search_widget.search_results_widget.hide_hidden_columns)
         search_state.enabled = True
         search_state.search()
-
-
-

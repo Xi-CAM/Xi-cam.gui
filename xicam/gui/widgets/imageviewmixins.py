@@ -69,7 +69,7 @@ class PixelSpace(ImageView):
         shape = img.shape
         a = [(0, shape[-2] - 1), (shape[-1] - 1, shape[-2] - 1), (shape[-1] - 1, 0), (0, 0)]
 
-        b = [(0, 0), (shape[-1] - 1, 0), (shape[-1] - 1, shape[-2] - 1), (0, shape[-2] - 1)]
+        b = [(0, 1), (shape[-1] - 1, 1), (shape[-1] - 1, shape[-2]), (0, shape[-2])]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -289,7 +289,7 @@ class PixelCoordinates(PixelSpace):
             f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
             f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
-            f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
+            f"<span style=''>y={pxpos.y():0.1f}</span>, "
             f"<span style=''>I={I:0.0f}</span></div>"
         )
 
@@ -645,7 +645,10 @@ class CatalogView(ImageView):
             eventStream = getattr(self.catalog, self.stream).to_dask()[self.field]
             # Trim off event dimension (so transpose works)
             if eventStream.ndim > 3:
-                eventStream = eventStream[0]
+                if eventStream.shape[0] == 1:  # if only one event, drop the event axis
+                    eventStream = eventStream[0]
+                if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
+                    eventStream = eventStream[:, 0]
             self.xarray = MetaXArray(eventStream)
             self.setImage(img=self.xarray, *args, **kwargs)
         else:
@@ -659,7 +662,7 @@ class CatalogView(ImageView):
         self.setCatalog(self.catalog, self.stream, field)
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
-            self.setGeometry(pluginmanager.getPluginByName('xicam.SAXS.calibration', 'SettingsPlugin').plugin_object.AI(field))
+            self.setGeometry(pluginmanager.get_plugin_by_name('xicam.SAXS.calibration', 'SettingsPlugin').AI(field))
 
 
 class ImageItemHistogramOverflowFix(ImageItem):

@@ -1,22 +1,34 @@
 # Adapted from http://doc.qt.io/qt-5/qtwidgets-dialogs-configdialog-configdialog-cpp.html under BSD
 
 
-# TODO QtModern, QtDarkStyle
 # TODO Add remotes config
 # TODO Add usage statistics config
-# TODO QSettings
 
 from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QStandardItemModel, QStandardItem, QKeyEvent
-from qtpy.QtWidgets import QDialog, QApplication, QListView, QStackedWidget, QHBoxLayout, QVBoxLayout, QAbstractItemView, QDialogButtonBox
+from qtpy.QtWidgets import QDialog, QApplication, QListView, QStackedWidget, QHBoxLayout, QVBoxLayout, \
+    QAbstractItemView, QDialogButtonBox
 
-from xicam.plugins import manager as pluginmanager
+from xicam.plugins import manager as pluginmanager, Filters
 from xicam.core import msg
+
+
+class ConfigRestorer:
+    def __init__(self):
+        # Restore Settings
+        pluginmanager.attach(self.request_reload, Filters.COMPLETE)
+
+    @staticmethod
+    def request_reload():
+        for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
+            plugin.restore()
 
 
 class ConfigDialog(QDialog):
     def __init__(self):
         super(ConfigDialog, self).__init__()
+
+        self.needs_reload = True
 
         # Set size and position
         self.setGeometry(0, 0, 900, 550)
@@ -65,16 +77,20 @@ class ConfigDialog(QDialog):
 
         self.lastwidget = None
 
-        self.createIcons()
-        self.restore()
+        # Restore Settings
+        pluginmanager.attach(self.request_reload, Filters.COMPLETE)
 
-        pluginmanager.attach(self.pluginsChanged)
+    def request_reload(self):
+        if self.isVisible():
+            self.reload()
+        else:
+            self.needs_reload = True  # The restore will happen when shown
 
     def createIcons(self):
         self.contentsModel.clear()
-        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
-            item = QStandardItem(pluginInfo.plugin_object.icon, pluginInfo.plugin_object.name())
-            item.widget = pluginInfo.plugin_object.widget
+        for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
+            item = QStandardItem(plugin.icon, plugin.name())
+            item.widget = plugin.widget
             item.setTextAlignment(Qt.AlignHCenter)
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             item.setSizeHint(QSize(136, 80))
@@ -84,7 +100,8 @@ class ConfigDialog(QDialog):
         if self.lastwidget:
             self.pagesWidget.addWidget(self.lastwidget)
             self.pagesWidget.setCurrentWidget(self.lastwidget)
-        self.restore()
+        if self.needs_reload:
+            self.reload()
         super(ConfigDialog, self).show()
 
     def changePage(self, current, previous):
@@ -95,14 +112,8 @@ class ConfigDialog(QDialog):
         self.pagesWidget.setCurrentWidget(current.widget)
         self.lastwidget = current.widget
 
-    def pluginsChanged(self):
+    def reload(self):
         self.createIcons()
-
-    def restore(self):
-        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
-            pluginInfo.plugin_object.restore()
-
-        self.apply()
 
     def ok(self):
         self._empty()
@@ -110,12 +121,11 @@ class ConfigDialog(QDialog):
         self.accept()
 
     def apply(self):
-        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
-            pluginInfo.plugin_object.save()
+        for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
+            plugin.save()
 
     def close(self):
         self._empty()
-        self.restore()
         self.reject()
 
     def _empty(self):

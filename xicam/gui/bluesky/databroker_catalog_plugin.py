@@ -1,16 +1,13 @@
 """
 Catalog Plugin for browsing pre-configured databroker catalogs
 """
-from databroker import MergedCatalog
 from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
-from databroker.v2 import Broker
-from intake.catalog import Catalog
-from intake.catalog.base import RemoteCatalog
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 import logging
+from typing import List
 
 from xicam.gui.bluesky.central import CentralWidget
 
@@ -46,12 +43,16 @@ class SearchingCatalogController(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.centralWidget = CentralWidget(menuBar=None, catalog=root_catalog)
 
-        def emit_opened_catalogs(name, my_list):
+        def emit_opened_catalogs(name, catalogs: List[BlueskyRun]):
             """Emit each selected and opened catalog to sigOpen"""
-            [self.sigOpen.emit(item) for item in my_list]
+            [self.sigOpen.emit(item) for item in catalogs]
+
+        def preview_entry(name, catalog: BlueskyRun):
+            self.sigPreview.emit(catalog)
 
         # connect the open_entries in the search model to sigOpen
         self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
+        self.centralWidget.search_model.preview_entry.connect(preview_entry)
         self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
         layout.addWidget(self.centralWidget)
 
@@ -64,51 +65,16 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
     """
 
     # set name here so that it appears in the catalog dropdown
-    name = 'Bluesky Databroker'
+    name = 'Databroker'
 
     def __new__(cls):
         # importing catalog gives us #a catalog of pre-configured catalogs YAML files
         # locations by default might look something like:
         #  'USER_HOME/.local/share/intake', 'PYTHON_ENV/share/intake'
         from databroker import catalog
-        # normalizedCatalogs = []
-        # assemble_catalogs(normalizedCatalogs, catalog)
-
-        # set name again because CatalogPlugins also inherit from Catalog, and that by
-        # default not have a name
-        # mergedCatalog = MergedCatalog(normalizedCatalogs)
-        # mergedCatalog.controller = SearchingCatalogController(mergedCatalog)
-        # mergedCatalog.view = QListView()
-        # mergedCatalog.name = 'Bluesky Databroker'
-        # return mergedCatalog
-
-        '''
-        Hard-coded to read from a yaml source named 'intake_server' for testing.
-        
-        '''
         catalog.controller = SearchingCatalogController(catalog)
         catalog.view = QListView()
-        catalog.name = 'Bluesky Databroker'
+        catalog.name = 'Databroker'
         return catalog
 
-# def assemble_catalogs(normalizedCatalogs, parentCatalog):
-#     '''
-#      create a dict of only top level catalogs...parents of BlueskyRun
-#     :param normalizedCatalog:
-#     :param databrokerCatalogs:
-#     :return:
-#     '''
-#
-#     for catalogName in parentCatalog:
-#         catalogEntry = parentCatalog[catalogName]
-#         catalog = catalogEntry.get()
-#         if isinstance(catalog, Broker):
-#             # this test fails because when coming from intake,
-#             # the parent of BlueSkyRuns is a RemoteCatalog, not a Broker
-#             normalizedCatalogs.append(catalog)
-#             continue
-#         elif isinstance(catalog, Catalog):
-#             assemble_catalogs(normalizedCatalogs, catalog)
-#         else:
-#             continue
 
